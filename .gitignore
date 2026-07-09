@@ -1,3 +1,8 @@
 .direnv/
 result
 result-*
+
+# ephemeral helper files — never version controlled
+claude.sh
+claude.out
+git.sh
