@@ -208,6 +208,7 @@
                 git config --global user.name "CI"
                 git config --global init.defaultBranch master
                 cp -r ${self} repo && chmod -R u+w repo && cd repo
+                patchShebangs --build . >/dev/null
                 bats tests
                 touch $out
               '';
