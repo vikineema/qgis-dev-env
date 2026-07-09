@@ -102,6 +102,18 @@ teardown() {
   [[ "$output" == *VISIBLE* ]]
 }
 
+@test "embedded sidecar gets relative symlinks and stays invisible to git" {
+  cp -r "$SIDECAR" "$QGIS/qgis-dev-env"
+  rm -rf "$QGIS/qgis-dev-env/.git"
+  run "$QGIS/qgis-dev-env/bootstrap.sh" "$QGIS"
+  [ "$status" -eq 0 ]
+  target="$(readlink "$QGIS/.envrc")"
+  [ "${target:0:1}" != "/" ]
+  [ "$target" = "qgis-dev-env/overlay/envrc" ]
+  run git -C "$QGIS" status --porcelain
+  [ -z "$output" ]
+}
+
 @test "doctor passes isolation checks on a clean bootstrap" {
   "$SIDECAR/bootstrap.sh" "$QGIS"
   run env QGIS_DEV_SIDECAR="$SIDECAR" bash -c "cd '$QGIS' && bash '$SIDECAR/lib/tasks.sh' doctor"

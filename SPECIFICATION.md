@@ -123,10 +123,14 @@ graph TB
     S -.-> C
 ```
 
-The product is a **sidecar repository**. The QGIS checkout is a pristine
-upstream clone; every developer-environment artefact lives in `qgis-dev-env`
-and reaches the checkout only through symlinks that upstream git is told to
-ignore locally.
+The product is a **sidecar repository, embedded in the checkout** as
+`<QGIS>/qgis-dev-env/` — a plain nested git clone (not a submodule), hidden
+from upstream git by the same local exclude mechanism as everything else.
+Every developer-environment artefact lives in it and reaches the checkout
+root only through **relative symlinks** that upstream git is told to ignore
+locally. (An external location for the sidecar also works — bootstrap then
+uses absolute links — but the embed is the canonical layout so the whole
+project lives under one folder.)
 
 ### 2.2 User characteristics
 
@@ -181,16 +185,18 @@ illustrative; the SRS-normative names are in FR-N4 and Appendix A.
 while the cold build runs):**
 
 1. **Check out upstream QGIS** somewhere you like:
-   `git clone git@github.com:qgis/QGIS.git ~/dev/cpp/QGIS`
-2. **Check out the dev sidecar next to it** (never inside it):
-   `git clone git@github.com:kartoza/qgis-dev-env.git ~/dev/nix/qgis-dev-env`
-3. **Prepare the QGIS checkout** — cd into the sidecar and point it at QGIS:
-   `cd ~/dev/nix/qgis-dev-env && ./bootstrap.sh ~/dev/cpp/QGIS`
-   This symlinks `.envrc`, `.nvim.lua`, `.clangd` and friends into the QGIS
-   folder, tells QGIS's *local* git to ignore them forever, and installs the
-   pre-commit hooks and the anti-leak push guard.
-4. **Enter the environment** — cd into the QGIS folder and approve direnv:
-   `cd ~/dev/cpp/QGIS && direnv allow`
+   `git clone git@github.com:qgis/QGIS.git ~/dev/cpp/QGIS && cd ~/dev/cpp/QGIS`
+2. **Check out the dev sidecar embedded inside it** — a plain nested clone,
+   deliberately not a submodule:
+   `git clone git@github.com:timlinux/qgis-dev-env.git qgis-dev-env`
+3. **Prepare the QGIS checkout** — point the sidecar at its host:
+   `./qgis-dev-env/bootstrap.sh .`
+   This creates relative symlinks (`.envrc`, `.nvim.lua`, `.clangd`, …)
+   reaching down into the embed, tells QGIS's *local* git to ignore them and
+   the embed itself forever, and installs the pre-commit hooks and the
+   anti-leak push guard.
+4. **Enter the environment** — approve direnv:
+   `direnv allow`
    Nix now drops you into a shell where every compiler, library, LSP server,
    and QA tool exists at pinned versions. Nothing was installed globally.
 5. **Configure and do the one unavoidable cold compile:**
@@ -256,7 +262,7 @@ Priorities: **M**ust, **S**hould, **C**ould (MoSCoW).
 |----|-----|-------------|
 | FR-I1 | M | All overlay artefacts live in a standalone git repo `qgis-dev-env`, hosted on GitHub (`github.com/timlinux/qgis-dev-env`; may later move to the Kartoza organisation), cloneable by colleagues. |
 | FR-I2 | M | A bootstrap command (`./bootstrap.sh <qgis-checkout>` and `nix run .#bootstrap`) symlinks overlay files into the checkout and **idempotently** appends each symlink name to `<checkout>/.git/info/exclude`. Running it twice produces no duplicates and no errors. |
-| FR-I3 | M | Overlay files placed in the checkout are limited to: `.envrc`, `.nvim.lua`, `.exrc`, `.clangd`, `pyrightconfig.json`, `PROMPT.log`, `.dev-env` (state dir). No tracked upstream file is modified. This SRS itself lives **only** in the sidecar (`SPECIFICATION.md`), not in the checkout. |
+| FR-I3 | M | Overlay files placed in the checkout are limited to: the embedded `qgis-dev-env/` clone, `.envrc`, `.nvim.lua`, `.exrc`, `.clangd`, `pyrightconfig.json`, `PROMPT.log`, `.dev-env` (state dir). No tracked upstream file is modified. This SRS itself lives **only** in the sidecar (`SPECIFICATION.md`), not at the checkout root. |
 | FR-I4 | M | A guard verifies isolation: `nix run .#doctor` (and `<leader>pv` in Neovim) runs `git -C <checkout> status --porcelain` and fails loudly if any overlay artefact is visible to upstream git. |
 | FR-I5 | M | An **anti-leak pre-push guard**: bootstrap installs a `pre-push` hook *only if the checkout has none*, refusing to push any commit that adds an overlay-owned path; if upstream ever ships hooks, the guard is layered via `core.hooksPath` chaining instead. The hook itself lives in `qgis-dev-env` and is symlinked. |
 | FR-I6 | M | `bootstrap.sh --remove` cleanly unlinks everything and strips the exclude entries, restoring a pristine checkout. |

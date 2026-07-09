@@ -20,15 +20,17 @@ The complete requirements live in [SPECIFICATION.md](SPECIFICATION.md).
 ```bash
 # 1. upstream QGIS
 git clone git@github.com:qgis/QGIS.git ~/dev/cpp/QGIS
+cd ~/dev/cpp/QGIS
 
-# 2. this sidecar, NEXT TO it (never inside it)
-git clone git@github.com:timlinux/qgis-dev-env.git ~/dev/nix/qgis-dev-env
+# 2. this sidecar, EMBEDDED in the checkout (a plain nested clone — not a
+#    submodule; bootstrap hides it from upstream git via .git/info/exclude)
+git clone git@github.com:timlinux/qgis-dev-env.git qgis-dev-env
 
 # 3. overlay the checkout (idempotent; never touches tracked files)
-~/dev/nix/qgis-dev-env/bootstrap.sh ~/dev/cpp/QGIS
+./qgis-dev-env/bootstrap.sh .
 
 # 4. enter — direnv builds the entire toolchain, pinned by flake.lock
-cd ~/dev/cpp/QGIS && direnv allow
+direnv allow
 
 # 5. the one unavoidable cold build (ccache remembers everything after)
 qgis-dev build && qgis-dev run
@@ -66,12 +68,18 @@ SVG trend with gnuplot.
 Upstream QGIS does not accept AI contributions, and this tooling must never
 leak there. Three layers enforce that (SRS group I):
 
-1. Overlay files reach the checkout only as **symlinks registered in
-   `.git/info/exclude`** — local-only, never committed, shared by all
-   worktrees.
-2. A **pre-push guard** blocks any commit touching overlay paths, even after
-   `git add -f`.
+1. Overlay files reach the checkout only as **relative symlinks registered
+   in `.git/info/exclude`** — local-only, never committed, shared by all
+   worktrees. The embedded `qgis-dev-env/` clone itself is excluded the same
+   way (it is a plain nested repo, deliberately *not* a submodule, so no
+   gitlink can ever be committed upstream by accident).
+2. A **pre-push guard** blocks any commit touching overlay paths (including
+   `qgis-dev-env/` itself), even after `git add -f`.
 3. `qgis-dev doctor` verifies isolation across every worktree.
+
+⚠️ One habit to keep: `git clean -fdx` (capital X/x variants) in the QGIS
+checkout deletes *ignored* files — which now includes this embed and your
+`build/`. Plain `git clean -fd` is safe.
 
 `bootstrap.sh --remove <checkout>` restores a byte-pristine checkout (your
 `PROMPT.log` and state are preserved under `~/.local/state/qgis-dev-env/`).

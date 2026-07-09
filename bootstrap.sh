@@ -45,6 +45,7 @@ EXCLUDES=(
   ".claude/"
   "result"
   "*.pre-qgis-dev-env"
+  "qgis-dev-env/" # the sidecar itself, embedded in the checkout (not a submodule)
 )
 
 MODE=install
@@ -88,7 +89,7 @@ write_exclude_block() { # $1 = install|remove
 }
 
 install_links() {
-  local spec name src dst
+  local spec name src dst linksrc
   for spec in "${LINKS[@]}"; do
     name="${spec%%:*}"
     src="$SIDECAR/${spec#*:}"
@@ -102,7 +103,14 @@ install_links() {
         die "refusing to overwrite existing $dst (inspect it, then re-run with --force)"
       fi
     fi
-    ln -sfn "$src" "$dst"
+    # Embedded sidecar (inside the checkout): relative links, so the whole
+    # tree can be moved as one unit. External sidecar: absolute links.
+    if [[ "$SIDECAR" == "$TARGET"/* ]]; then
+      linksrc="$(realpath --relative-to="$TARGET" "$src")"
+    else
+      linksrc="$src"
+    fi
+    ln -sfn "$linksrc" "$dst"
   done
 }
 
@@ -159,7 +167,7 @@ install)
   touch "$TARGET/PROMPT.log"
   git -C "$TARGET" config blame.ignoreRevsFile .git-blame-ignore-revs
   # Verify isolation immediately (FR-I4)
-  if git -C "$TARGET" status --porcelain | grep -qE '\.envrc|\.nvim\.lua|\.exrc|\.clangd|pyrightconfig|SRS-qgis-dev-env|PROMPT\.log|\.dev-env'; then
+  if git -C "$TARGET" status --porcelain | grep -qE '\.envrc|\.nvim\.lua|\.exrc|\.clangd|pyrightconfig|PROMPT\.log|\.dev-env|qgis-dev-env'; then
     die "overlay files are visible to git — isolation FAILED, investigate before continuing"
   fi
   note "done. Next: cd '$TARGET' && direnv allow   (then 'qgis-dev build' or <leader>pb in Neovim)"
