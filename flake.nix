@@ -99,6 +99,7 @@
             pkgs.graphviz
             pkgs.pre-commit
             pkgs.shellcheck
+            pkgs.pkg-config # cmake feature probes degrade silently without it
             pkgs.gnuplot # build-time trend graphs (qgis-dev stats --graph)
           ];
 
@@ -138,9 +139,14 @@
           ]);
         in
         {
-          # The overlay devshell: upstream QGIS devshell + everything else.
+          # The overlay devshell: upstream QGIS's dependency set + everything
+          # else. Composed from their packages (not their devShell) so we own
+          # the activation experience instead of inheriting dev-help noise.
           default = pkgs.mkShell {
-            inputsFrom = [ qgis.devShells.${system}.default ];
+            inputsFrom = [
+              qgis.packages.${system}.qgis
+              qgis.packages.${system}.qgis.passthru.unwrapped
+            ];
             packages = [
               qgisDev
               devPython
@@ -152,6 +158,13 @@
             ++ sidecarTools;
 
             shellHook = ''
+              # Qt runtime plugin discovery (was upstream's devShell hook).
+              export QT_PLUGIN_PATH="${qt.qtbase}/${qt.qtbase.qtPluginPrefix}"
+              export QT_QPA_PLATFORM_PLUGIN_PATH="${qt.qtbase}/${qt.qtbase.qtPluginPrefix}/platforms"
+              # Qt and lualatex need a UTF-8 locale; direnv often has none.
+              if [ "''${LANG:-C}" = "C" ] || [ -z "''${LANG:-}" ]; then
+                export LANG=C.UTF-8
+              fi
               # Store paths are resolved here, at shell time — never committed
               # into dotfiles (SRS C6). Consumed by `qgis-dev configure`.
               export QGIS_DEV_QT_PLUGINS_DIR="${qt.qtbase}/${qt.qtbase.qtPluginPrefix}"
@@ -164,6 +177,8 @@
                 mkdir -p .dev-env
                 ln -sfn "$QGIS_DEV_PYTHON" .dev-env/python
               fi
+              # Branded activation banner (real dotfile per SRS C5).
+              source ${./lib/shell-motd.sh}
             '';
           };
 
