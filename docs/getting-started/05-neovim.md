@@ -58,4 +58,12 @@ build — and failures land in the **quickfix list** at the exact
 A supplementary ctags file covers what LSPs don't index — SIP bindings,
 CMake variables, shell — regenerate with `<leader>pg`.
 
+!!! note "First-open heaviness, and what tames it"
+    Two things are deliberately bounded so a 1.5 M-file tree doesn't melt
+    your editor: clangd's **background index** is built once (CPU-heavy on
+    the first day, instant ever after), and **lua-language-server** is
+    fenced by the overlay's `.luarc.json` so it never crawls `build/`,
+    `.git`, `src/` and friends looking for Lua — without it, luals takes
+    minutes to start in a QGIS checkout.
+
 Continue to [6 · Pre-commit & standards](06-precommit.md).

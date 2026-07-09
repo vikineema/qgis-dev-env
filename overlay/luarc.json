@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime.version": "LuaJIT",
+  "workspace.ignoreDir": [
+    "build",
+    "build-*",
+    ".git",
+    "external",
+    "src",
+    "python",
+    "tests",
+    "resources",
+    "images",
+    "i18n",
+    "doc",
+    "ms-windows",
+    "mac",
+    "linux",
+    "debian",
+    ".docker",
+    "qgis-dev-env/.git",
+    "qgis-dev-env/.direnv"
+  ],
+  "workspace.maxPreload": 500,
+  "workspace.preloadFileSize": 150,
+  "workspace.checkThirdParty": false,
+  "diagnostics.globals": ["vim"],
+  "telemetry.enable": false
+}

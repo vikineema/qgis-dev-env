@@ -555,7 +555,7 @@ cmd_doctor() {
   local wt leaks
   while read -r wt; do
     leaks="$(git -C "$wt" status --porcelain 2>/dev/null |
-      grep -cE '(\.envrc|\.nvim\.lua|\.exrc|\.clangd|pyrightconfig\.json|PROMPT\.log|SRS-qgis-dev-env\.md|\.dev-env|qgis-dev-env)' || true)"
+      grep -cE '(\.envrc|\.nvim\.lua|\.exrc|\.clangd|pyrightconfig\.json|\.luarc\.json|PROMPT\.log|SRS-qgis-dev-env\.md|\.dev-env|qgis-dev-env)' || true)"
     if [[ "$leaks" -eq 0 ]]; then
       ok "isolation intact: $wt"
     else

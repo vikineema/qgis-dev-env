@@ -18,7 +18,7 @@ performs, these actions (none touch a tracked upstream file):
 
 | Action | Detail |
 |---|---|
-| Relative symlinks | `.envrc`, `.nvim.lua`, `.exrc`, `.clangd`, `pyrightconfig.json` → into `qgis-dev-env/overlay/` |
+| Relative symlinks | `.envrc`, `.nvim.lua`, `.exrc`, `.clangd`, `pyrightconfig.json`, `.luarc.json` → into `qgis-dev-env/overlay/` |
 | Managed exclude block | Registers every overlay path **and the embed itself** in `.git/info/exclude` |
 | Anti-leak guard | Installs a `pre-push` hook that refuses to push commits touching overlay paths — even after `git add -f` |
 | Pre-commit hooks | Runs `pre-commit install` for QGIS's own hook suite (deferred to first devshell entry if `pre-commit` isn't on your PATH yet) |

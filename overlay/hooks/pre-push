@@ -7,7 +7,7 @@
 # accidental staging; this catches `git add -f` muscle memory too.
 set -euo pipefail
 
-overlay_re='^(\.envrc|\.nvim\.lua|\.exrc|\.clangd|pyrightconfig\.json|PROMPT\.log|SRS-qgis-dev-env\.md|\.dev-env(/|$)|qgis-dev-env(/|$))'
+overlay_re='^(\.envrc|\.nvim\.lua|\.exrc|\.clangd|pyrightconfig\.json|\.luarc\.json|PROMPT\.log|SRS-qgis-dev-env\.md|\.dev-env(/|$)|qgis-dev-env(/|$))'
 fail=0
 
 while read -r _local_ref local_sha _remote_ref remote_sha; do
