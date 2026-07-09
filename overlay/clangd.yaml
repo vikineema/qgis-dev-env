@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+# SPDX-License-Identifier: MIT
+#
+# Symlinked into the QGIS checkout as .clangd (SRS FR-L1). The compilation
+# database comes from qgis-dev configure (CMAKE_EXPORT_COMPILE_COMMANDS=ON);
+# `build` is relative, so each worktree finds its own database.
+CompileFlags:
+  CompilationDatabase: build
+  Remove:
+    - -fanalyzer
+    - -mno-direct-extern-access
+Index:
+  Background: Build
+---
+# Generated code (moc/uic/SIP output under build/) — parse, don't nag.
+If:
+  PathMatch: build/.*
+Diagnostics:
+  Suppress: "*"

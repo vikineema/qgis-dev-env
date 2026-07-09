@@ -1,0 +1,7 @@
+" SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+" SPDX-License-Identifier: MIT
+"
+" Fallback for setups that source .exrc but not .nvim.lua (SRS FR-E1).
+if has('nvim') && filereadable('.nvim.lua')
+  luafile .nvim.lua
+endif

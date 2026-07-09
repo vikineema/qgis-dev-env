@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+# SPDX-License-Identifier: MIT
+# shellcheck shell=bash disable=SC2148
+#
+# Symlinked into the QGIS checkout as .envrc — activates the qgis-dev-env
+# overlay devshell via direnv/nix-direnv (SRS FR-N3). Resolves the sidecar
+# location from its own symlink, so it works for any clone location and
+# every git worktree.
+
+_qde_self="$(readlink -f "${BASH_SOURCE[0]:-.envrc}")"
+_qde_sidecar="$(dirname "$(dirname "$_qde_self")")"
+
+export QGIS_DEV_SIDECAR="$_qde_sidecar"
+
+# ccache: committed config + one shared cache across all checkouts/worktrees
+# (SRS FR-B2). CCACHE_DIR wins over the config file's cache_dir.
+export CCACHE_CONFIGPATH="$_qde_sidecar/overlay/ccache.conf"
+export CCACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/qgis-ccache"
+
+watch_file "$_qde_sidecar/flake.nix"
+watch_file "$_qde_sidecar/flake.lock"
+use flake "path:$_qde_sidecar"

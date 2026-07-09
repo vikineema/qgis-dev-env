@@ -1,0 +1,7 @@
+{
+  "typeCheckingMode": "basic",
+  "pythonPath": ".dev-env/python",
+  "extraPaths": ["python", "build/output/python"],
+  "exclude": ["build", "external", "**/auto_additions", "**/auto_static"],
+  "reportMissingImports": "warning"
+}
