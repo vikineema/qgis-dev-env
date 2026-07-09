@@ -289,6 +289,9 @@ Priorities: **M**ust, **S**hould, **C**ould (MoSCoW).
 | FR-B8 | S | Build statistics: `ccache -s` summary and last-build wall time surfaced on demand (`<leader>ps`); ccache stats zeroing available. |
 | FR-B9 | C | Ninja trace export (`.ninja_log` → Chrome-trace via `ninjatracing`) for occasional build-bottleneck analysis. |
 | FR-B10 | C | Evaluate PCH (`WITH_PCH`/upstream default) interaction with ccache, and a shared remote ccache (ccache HTTP secondary storage) for the team; adopt only if measured wins are recorded in the CHANGELOG. |
+| FR-B11 | M | Builds use **all cores by default** (Ninja's native behaviour, surfaced explicitly); `-jN` passes through for when the machine must stay responsive. |
+| FR-B12 | M | Optional **CPU performance mode during builds**: a persistent toggle (`qgis-dev perf build-toggle`, `<leader>pe`) switches the host power profile to `performance` for the duration of each build and restores the previous profile afterwards (via `powerprofilesctl`; degrades to a notice when unavailable). Immediate `perf on`/`perf off` also provided. |
+| FR-B13 | M | **Build-time telemetry log**: every build appends a TSV record (timestamp, host, worktree, branch, profile, targets, jobs, duration, per-build ccache hit rate, result) to `$XDG_STATE_HOME/qgis-dev-env/build-log.tsv` — machine-global, so all worktrees and checkouts share one comparable history. `qgis-dev stats` (`<leader>pG`) renders a table + terminal trend sparkline; `stats --graph` renders an SVG via gnuplot for graphing build performance over time. |
 
 ### 3.4 Neovim project experience (group E)
 
@@ -397,6 +400,11 @@ evidence — using the right tool for each job, all provisioned from nixpkgs.
 
 ## 5. Acceptance criteria (verification matrix)
 
+**The two headline proofs of good execution:** (1) a **seamless initial
+build** — clone, bootstrap, `direnv allow`, build, with no manual
+configuration at any step; and (2) **rapid compilation of changes** after
+that initial build. Everything below elaborates those two.
+
 | # | Scenario | Pass condition | Verifies |
 |---|----------|----------------|----------|
 | A1 | Fresh colleague: clone overlay, run bootstrap against a fresh QGIS clone, `direnv allow`, open Neovim | `<leader>p` menu appears with labels; `:LspInfo` shows clangd, basedpyright, neocmakelsp attached | FR-I2, N3, E1, E2, L1–L4 |
@@ -416,6 +424,8 @@ evidence — using the right tool for each job, all provisioned from nixpkgs.
 | A15 | Plant a deliberate `new`-without-`delete` in a small unit test, run `<leader>pam` on it | Leak reported in quickfix pointing at the planted line; Qt/Python noise suppressed | FR-G1, G2 |
 | A16 | Same planted bug via `<leader>pas` | asan+ubsan profile builds (distinct ccache namespace), report parsed to quickfix at the same line | FR-G3, B6 |
 | A17 | `<leader>pac` on a short QGIS session, then `<leader>pal` | Flamegraph opens in hotspot; artefact listed and re-openable from the diagnostics archive | FR-G5, G9 |
+| A18 | Two consecutive builds, then `<leader>pG` | Both appear in `build-log.tsv` with duration + ccache hit rate; trend sparkline renders; `stats --graph` writes an SVG | FR-B13 |
+| A19 | `<leader>pe` on, run a build while watching `powerprofilesctl get` | Profile switches to performance during the build and restores afterwards; toggling off stops the behaviour | FR-B12 |
 
 ---
 
@@ -533,6 +543,8 @@ Recorded here so reviewers can veto them explicitly:
 | `<leader>pg` | Refresh tags | regenerate ctags supplement (async) |
 | `<leader>ps` | ccache stats | show stats + last build time |
 | `<leader>pS` | ccache zero stats | reset counters |
+| `<leader>pe` | Perf boost toggle | performance power profile during builds, restored after |
+| `<leader>pG` | Build-time trends | logged history: table + sparkline (`stats --graph` for SVG) |
 | `<leader>pv` | Doctor | env/LSP/isolation health report (all worktrees) |
 | `<leader>pq` | Task list | open async task/output browser |
 | `<leader>pw` | **+worktrees** | submenu |
