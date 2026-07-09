@@ -1,0 +1,159 @@
+# SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+# SPDX-License-Identifier: MIT
+#
+# Docs pipeline (approach from kartoza/qgis-desktop-docker):
+#   * Build the Kartoza-branded PDF (`nix run .#handbook-pdf`) on every push,
+#     PR and release. Upload as a short-lived artifact for pushes / PRs
+#     (7 days) and attach as a long-lived asset on release publish.
+#   * Build the mkdocs site (`nix run .#handbook-build`) and publish it to
+#     GitHub Pages on release-published, push to main, and manual dispatch.
+#
+# GH Pages must be set to "Deploy from GitHub Actions" in the repo settings.
+
+name: docs
+
+on:
+  release:
+    types: [published]
+  pull_request:
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "SPECIFICATION.md"
+      - "lib/docs-pdf.sh"
+      - ".github/workflows/docs.yml"
+      - "flake.nix"
+      - "flake.lock"
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "SPECIFICATION.md"
+      - "lib/docs-pdf.sh"
+      - ".github/workflows/docs.yml"
+      - "flake.nix"
+      - "flake.lock"
+  workflow_dispatch:
+
+# One publish in flight per ref; don't cancel mid-upload (Pages dislikes it).
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+# Least privilege: contents:write only in the release-asset job.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  # ---------------------------------------------------------------------
+  # PDF build — every trigger; artifact so PRs get a linkable copy.
+  # ---------------------------------------------------------------------
+  pdf:
+    name: Build handbook PDF
+    runs-on: ubuntu-latest
+    outputs:
+      pdf-name: ${{ steps.name.outputs.name }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Compute PDF filename
+        id: name
+        run: |
+          case "${{ github.event_name }}" in
+            release)      tag="${{ github.event.release.tag_name }}" ;;
+            pull_request) tag="pr-${{ github.event.pull_request.number }}" ;;
+            *)            tag="$(git rev-parse --short HEAD)" ;;
+          esac
+          echo "name=qgis-dev-env-handbook-${tag}.pdf" >> "$GITHUB_OUTPUT"
+
+      - name: Build PDF (nix run .#handbook-pdf)
+        run: nix run .#handbook-pdf -- "${{ steps.name.outputs.name }}"
+
+      - name: Upload PDF as short-lived artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.name }}
+          path: ${{ steps.name.outputs.name }}
+          retention-days: 7
+
+  # ---------------------------------------------------------------------
+  # On release, attach the PDF as a permanent asset.
+  # ---------------------------------------------------------------------
+  release-pdf:
+    name: Attach PDF to release
+    needs: pdf
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Download PDF artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.pdf.outputs.pdf-name }}
+          path: ./pdf
+
+      - name: Upload PDF to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "./pdf/${{ needs.pdf.outputs.pdf-name }}" \
+            --clobber
+
+  # ---------------------------------------------------------------------
+  # mkdocs site — skipped on PRs (no Pages preview).
+  # ---------------------------------------------------------------------
+  site:
+    name: Build mkdocs site
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Build site (nix run .#handbook-build)
+        run: nix run .#handbook-build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: site
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

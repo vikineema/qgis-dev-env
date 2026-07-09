@@ -164,6 +164,12 @@ discoverable (which-key labels) so a colleague can be productive in minutes.
    Kartoza i18n rule is accepted and recorded here.
 9. **C9 — No telemetry.** All statistics (ccache, build times) are local
    files only.
+10. **C10 — Build-tree strategy.** Development builds are ordinary
+    CMake/Ninja builds **in the working tree** (`<checkout>/build/`), run
+    directly from `build/output/bin/`. Nix provisions the *toolchain* only;
+    QGIS is never compiled into the nix store as part of the development
+    loop (upstream's `nix build` packaging remains available but is not our
+    edit-compile-run path — a store build would forfeit incrementality).
 
 ### 2.4 Assumptions and dependencies
 
@@ -280,6 +286,7 @@ Priorities: **M**ust, **S**hould, **C**ould (MoSCoW).
 | FR-N5 | M | `flake.lock` is committed; `nix flake check` builds the devshell and runs the repo's own test suite; GitHub Actions runs the same check on every PR. |
 | FR-N6 | S | The overlay's nixpkgs input follows the upstream QGIS flake's pin where practical, so library versions match what upstream CI uses. |
 | FR-N7 | C | Optional shared binary cache (Cachix or Kartoza-hosted) for the devshell closure so colleagues' first `direnv allow` is fast. |
+| FR-N8 | M | The devshell ships [`timlinux/nix-vim`](https://github.com/timlinux/nix-vim) as a flake input and standard dev package: inside the shell, `nvim` is the fully configured team editor, pinned by this repo's `flake.lock` (its own input pins are preserved, not overridden). |
 
 ### 3.3 Build acceleration (group B)
 
@@ -344,6 +351,8 @@ Priorities: **M**ust, **S**hould, **C**ould (MoSCoW).
 | FR-D1 | M | `<leader>pd` builds the QGIS API docs (`ninja apidoc`, honouring the doxygen-awesome theme work on the current branch); doxygen warnings go to quickfix. |
 | FR-D2 | M | `<leader>pD` serves the built docs locally (reusing upstream's `nix run .#docs` app or a python http.server on `build/doc`) and opens the browser at the page for the class under the cursor when resolvable. |
 | FR-D3 | M | Overlay repo documentation: `README.md` (quickstart ≤ 10 lines to productive, Kartoza credit triplet), `SPECIFICATION.md` (this SRS, kept current), `PACKAGES.md` (annotated tool list), `CHANGELOG.md` (Keep-a-Changelog), architecture diagram. |
+| FR-D4 | M | **Developer handbook**: mkdocs-material site under `docs/`, themed with the Kartoza brand approach from `kartoza/InfrastructureMapper` (token CSS, Nunito/JetBrains Mono, custom palette, credit footer). Content covers the full developer journey — checkout, embed, bootstrap/trust, first compile, Neovim/nix-vim, pre-commit, first patch with the QGIS no-AI acknowledgement — plus reference pages and this SRS included verbatim. Served locally via `nix run .#handbook`, built strict via `nix run .#handbook-build`, published to GitHub Pages on push to main and on release. |
+| FR-D5 | M | **Handbook PDF**: `nix run .#handbook-pdf` assembles the handbook into a Kartoza-branded PDF (pandoc + pdflatex, cover/preamble templates — approach from `kartoza/qgis-desktop-docker`). CI builds it on every PR and push (7-day artifact) and attaches it permanently to every published release. |
 
 ### 3.8 Git worktree workflow (group W)
 

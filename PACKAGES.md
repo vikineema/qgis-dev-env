@@ -45,6 +45,19 @@ sourced from nixpkgs, pinned by `flake.lock` — no pip, no npm (SRS C3).
 | `gammaray` | Qt introspection (FR-G7; included when available in the pin) |
 | `gdb` | Debugging; split-dwarf + gdb-index configured by the debug profile |
 
+## Editor
+
+| Package | Why |
+|---|---|
+| `nix-vim` (flake input, [timlinux/nix-vim](https://github.com/timlinux/nix-vim)) | The standard, fully configured team Neovim — `nvim` inside the devshell (FR-N8) |
+
+## Documentation toolchain
+
+| Package | Why |
+|---|---|
+| `mkdocs`, `mkdocs-material` (+extensions, glightbox, git-revision-date) | Developer handbook site, Kartoza-themed (FR-D4) |
+| `pandoc`, `texlive.combine` (scheme-medium + brand fonts) | Kartoza-branded handbook PDF on PR/release (FR-D5) |
+
 ## Standards & repo hygiene
 
 | Package | Why |

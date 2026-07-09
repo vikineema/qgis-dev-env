@@ -12,3 +12,10 @@ path = [
 ]
 SPDX-FileCopyrightText = "2026 Kartoza (Pty) Ltd <tim@kartoza.com>"
 SPDX-License-Identifier = "MIT"
+
+# Kartoza brand assets and stylesheets, adapted from
+# kartoza/InfrastructureMapper (MIT, Tim Sutton / Kartoza).
+[[annotations]]
+path = ["docs/assets/**"]
+SPDX-FileCopyrightText = "Kartoza (Pty) Ltd <tim@kartoza.com>"
+SPDX-License-Identifier = "MIT"

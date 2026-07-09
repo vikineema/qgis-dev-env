@@ -6,3 +6,5 @@ result-*
 claude.sh
 claude.out
 git.sh
+site/
+*.pdf

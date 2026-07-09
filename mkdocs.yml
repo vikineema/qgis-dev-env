@@ -1,0 +1,174 @@
+# SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+# SPDX-License-Identifier: MIT
+#
+# Developer handbook for qgis-dev-env. Theming and visual styling follow
+# the Kartoza approach from kartoza/InfrastructureMapper (Material for
+# MkDocs + Kartoza brand tokens).
+site_name: QGIS Dev Env
+site_description: An isolated, reproducible NixOS + Neovim developer environment for hacking on QGIS core — fast builds, beautiful editing, zero upstream leakage.
+site_url: https://timlinux.github.io/qgis-dev-env/
+site_author: Kartoza
+copyright: >
+  &copy; Kartoza — Made with 💗 by
+  <a href="https://kartoza.com">Kartoza</a>
+  &middot; <a href="https://github.com/sponsors/timlinux">Donate</a>
+  &middot; <a href="https://github.com/timlinux/qgis-dev-env">GitHub</a>
+
+repo_url: https://github.com/timlinux/qgis-dev-env
+repo_name: timlinux/qgis-dev-env
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  # Kartoza Brand Pack — logo + favicon (palette / type tokens live in
+  # stylesheets/kartoza-tokens.css, adapter in stylesheets/extra.css).
+  logo: assets/brand/kartoza-symbol-color.svg
+  favicon: assets/brand/favicon.png
+  font:
+    text: Nunito
+    code: JetBrains Mono
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - content.tooltips
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.path
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/file-edit-outline
+    view: material/eye-outline
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/timlinux/qgis-dev-env
+      name: GitHub repository
+    - icon: fontawesome/solid/heart
+      link: https://github.com/sponsors/timlinux
+      name: Sponsor on GitHub
+  generator: false
+
+extra_css:
+  - stylesheets/kartoza-tokens.css
+  - stylesheets/extra.css
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 4
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      base_path: [.]
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds: {case: lower}
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+plugins:
+  - search:
+      lang: en
+  - glightbox:
+      touchNavigation: true
+      loop: false
+      effect: zoom
+      slide_effect: slide
+      width: 100%
+      height: auto
+      zoomable: true
+      draggable: true
+      skip_classes:
+        - no-lightbox
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+      fallback_to_build_date: true
+      strict: false
+
+nav:
+  - Home: index.md
+  - Developer Journey:
+    - getting-started/index.md
+    - 1. Check out QGIS: getting-started/01-checkout-qgis.md
+    - 2. Embed qgis-dev-env: getting-started/02-embed-sidecar.md
+    - 3. Bootstrap &amp; trust: getting-started/03-bootstrap.md
+    - 4. Your first compile: getting-started/04-first-compile.md
+    - 5. Editing with Neovim: getting-started/05-neovim.md
+    - 6. Pre-commit &amp; standards: getting-started/06-precommit.md
+    - 7. Your first patch: getting-started/07-first-patch.md
+  - Reference:
+    - reference/index.md
+    - qgis-dev commands: reference/qgis-dev.md
+    - Neovim keymap: reference/keymap.md
+    - Build profiles &amp; flags: reference/profiles.md
+    - Worktrees: reference/worktrees.md
+    - QA &amp; diagnostics: reference/qa.md
+  - About:
+    - about/index.md
+    - AI policy: about/ai-policy.md
+    - Specification: about/specification.md

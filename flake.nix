@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+# SPDX-License-Identifier: MIT
 {
   description = "Kartoza QGIS developer environment overlay — sidecar devshell, task runner and editor tooling";
 
@@ -8,6 +10,9 @@
     # theirs (SRS C2, FR-N1) and reuse their nixpkgs pin (FR-N6).
     qgis.url = "github:qgis/QGIS";
     nixpkgs.follows = "qgis/nixpkgs";
+    # Tim's fully configured Neovim — the standard editor of this devshell
+    # (FR-N8). Keeps its own pins so it behaves exactly as released.
+    nix-vim.url = "github:timlinux/nix-vim";
   };
 
   outputs =
@@ -15,6 +20,7 @@
       self,
       nixpkgs,
       qgis,
+      nix-vim,
     }:
     let
       systems = [
@@ -115,6 +121,21 @@
             pkgs.gitleaks
             pkgs.reuse
           ];
+
+          # nix-vim: the standard editor of this environment (FR-N8).
+          editor = lib.optionals (nix-vim.packages ? ${system}) [
+            nix-vim.packages.${system}.default
+          ];
+
+          # mkdocs stack for the developer handbook (FR-D4) — mirrors the
+          # kartoza/InfrastructureMapper documentation toolchain.
+          docsPython = pkgs.python3.withPackages (ps: [
+            ps.mkdocs
+            ps.mkdocs-material
+            ps.mkdocs-material-extensions
+            ps.mkdocs-glightbox
+            ps.mkdocs-git-revision-date-localized-plugin
+          ]);
         in
         {
           # The overlay devshell: upstream QGIS devshell + everything else.
@@ -124,6 +145,7 @@
               qgisDev
               devPython
             ]
+            ++ editor
             ++ lspServers
             ++ buildTools
             ++ qaTools
@@ -149,6 +171,7 @@
           tooling = pkgs.mkShell {
             packages = [
               qgisDev
+              docsPython
               pkgs.bats
               pkgs.shellcheck
               pkgs.gitleaks
@@ -165,6 +188,45 @@
       apps = forAllSystems (
         pkgs: system:
         let
+          # TeX Live for the handbook PDF (approach from
+          # kartoza/qgis-desktop-docker) — combine, not scheme-full, to keep
+          # the closure ~500 MB.
+          pdfLatex = pkgs.texlive.combine {
+            inherit (pkgs.texlive)
+              scheme-medium
+              # preamble.tex
+              titlesec
+              sectsty
+              fancyhdr
+              fvextra
+              soul
+              booktabs
+              enumitem
+              xcolor
+              pgf
+              fontspec
+              unicode-math
+              selnolig
+              # pandoc's default LaTeX writer requirements
+              upquote
+              microtype
+              parskip
+              xurl
+              bookmark
+              hyperref
+              xkeyval
+              etoolbox
+              pdftexcmds
+              infwarerr
+              kvoptions
+              ltxcmds
+              # Kartoza brand-pack body font (Lato) + transitive deps
+              lato
+              inconsolata
+              fontaxes
+              mweights
+              ;
+          };
           mkTask = name: {
             type = "app";
             program = toString (
@@ -185,6 +247,46 @@
               ''
             );
             meta.description = "Overlay this sidecar onto a QGIS checkout";
+          };
+          handbook = {
+            type = "app";
+            program = toString (
+              pkgs.writeShellScript "qgis-dev-handbook" ''
+                exec nix develop ${self}#tooling --command mkdocs serve -a localhost:8001 "$@"
+              ''
+            );
+            meta.description = "Serve the developer handbook (run from the sidecar repo)";
+          };
+          handbook-build = {
+            type = "app";
+            program = toString (
+              pkgs.writeShellScript "qgis-dev-handbook-build" ''
+                exec nix develop ${self}#tooling --command mkdocs build --strict "$@"
+              ''
+            );
+            meta.description = "Build the handbook site into ./site (run from the sidecar repo)";
+          };
+          handbook-pdf = {
+            type = "app";
+            program = toString (
+              pkgs.writeShellScript "qgis-dev-handbook-pdf" ''
+                export PATH=${
+                  lib.makeBinPath [
+                    pkgs.pandoc
+                    pdfLatex
+                    pkgs.coreutils
+                    pkgs.gnused
+                    pkgs.gawk
+                    pkgs.bash
+                  ]
+                }:$PATH
+                export QDE_DOCS_DIR=${./docs}
+                export QDE_SPEC_FILE=${./SPECIFICATION.md}
+                export QDE_PDF_DIR=${./docs/pdf}
+                exec ${lib.getExe pkgs.bash} ${./lib/docs-pdf.sh} "$@"
+              ''
+            );
+            meta.description = "Assemble the handbook into a Kartoza-branded PDF";
           };
         }
       );

@@ -9,6 +9,32 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning: [SemVer](https://semver.org/).
 
+## [0.2.0] - 2026-07-09
+
+### Added
+
+- **Embedded layout**: the sidecar now lives at `<QGIS>/qgis-dev-env`
+  (plain nested clone, excluded locally, relative overlay symlinks);
+  external placement still supported (FR-I1/I3 updated).
+- **nix-vim** (`timlinux/nix-vim`) as a flake input and the standard
+  editor of the devshell (FR-N8).
+- **Developer handbook**: mkdocs-material site with the Kartoza brand
+  theming from `kartoza/InfrastructureMapper` — the full developer
+  journey (checkout → embed → bootstrap/trust → first compile → Neovim →
+  pre-commit → first patch with the QGIS no-AI acknowledgement),
+  reference section and embedded SRS. `nix run .#handbook[-build]`
+  (FR-D4).
+- **Handbook PDF** on the `kartoza/qgis-desktop-docker` pattern:
+  `nix run .#handbook-pdf` (pandoc + pdflatex, branded cover/preamble);
+  docs CI builds it on every PR/push and attaches it to releases (FR-D5).
+- Spec constraint C10: development builds happen in the working tree
+  (`build/`), never into the nix store.
+
+### Fixed
+
+- Publish helper forces ssh remote URLs (gh defaults to https); helper
+  scripts are now ephemeral and gitignored, scrubbed from history.
+
 ## [0.1.0] - 2026-07-09
 
 ### Added

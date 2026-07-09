@@ -14,6 +14,13 @@ QA/diagnostics harness (sanitizers, valgrind, heaptrack, perf) — all without
 a single file ever becoming visible to upstream QGIS git.
 
 The complete requirements live in [SPECIFICATION.md](SPECIFICATION.md).
+The **developer handbook** — the full journey from checkout to your first
+upstream patch — is published at
+<https://timlinux.github.io/qgis-dev-env/> (and attached to every release
+as a Kartoza-branded PDF). Serve it locally with `nix run .#handbook`.
+
+Inside the devshell, `nvim` is [timlinux/nix-vim](https://github.com/timlinux/nix-vim)
+— the standard, fully configured team editor, pinned by `flake.lock`.
 
 ## Quickstart
 
