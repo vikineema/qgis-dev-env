@@ -8,6 +8,10 @@
 
 _qde_motd() {
   [ -n "${QGIS_DEV_QUIET:-}" ] && return 0
+  # Print once per activation: under direnv both the flake shellHook and
+  # .envrc source this file in the same process.
+  [ -n "${_QDE_MOTD_DONE:-}" ] && return 0
+  _QDE_MOTD_DONE=1
   # Only in a QGIS checkout root — silent elsewhere (e.g. sidecar hacking).
   [ -f CMakeLists.txt ] && [ -d src/core ] || return 0
 
@@ -29,13 +33,19 @@ _qde_motd() {
 
   if command -v ccache >/dev/null 2>&1; then
     ccache_line="$(ccache -s 2>/dev/null | awk -F': *' '
-      /^ *Hits/ && hits == "" { hits = $2 }
-      /Cache size/ { size = $2 }
+      /^ *Hits/ && hits == "" { gsub(/ +/, " ", $2); hits = $2 }
+      /Cache size/ {
+        unit = "GB"
+        if ($1 ~ /GiB/) unit = "GiB"
+        gsub(/ +/, " ", $2)
+        size = $2 " " unit
+      }
       END {
+        if (size ~ /^0\.0 /) { printf "empty - first build will fill it"; exit }
         if (size != "") printf "%s", size
         if (hits != "") printf "   hits %s", hits
       }')"
-    [ -n "$ccache_line" ] || ccache_line="empty (first build will fill it)"
+    [ -n "$ccache_line" ] || ccache_line="empty - first build will fill it"
   else
     ccache_line="unavailable"
   fi
