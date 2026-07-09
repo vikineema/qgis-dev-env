@@ -91,8 +91,8 @@ transform() {
       -e '/^<div/d' -e '/^<\/div>/d' \
       -e 's/++\([a-zA-Z-]*\)++/`\1`/g' \
       -e 's/💗/love/g' \
-      -e 's/🚀//g' -e 's/⌨//g' -e 's/🔒//g' -e 's/📐//g' \
-      -e 's/🔧//g' -e 's/🧭//g' -e 's/️//g' \
+      -e 's/🚀 \?//g' -e 's/⌨ \?//g' -e 's/🔒 \?//g' -e 's/📐 \?//g' \
+      -e 's/🔧 \?//g' -e 's/🧭 \?//g' -e 's/️ \?//g' \
       -e 's/⚠/WARNING /g' \
       -e 's/✓/OK/g' -e 's/✗/X/g' \
       -e 's/≥/>=/g' -e 's/≤/<=/g' -e 's/≈/~/g' \
