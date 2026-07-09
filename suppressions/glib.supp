@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+# SPDX-License-Identifier: MIT
+#
+# Valgrind suppressions for glib/gobject one-time allocations (pulled in via
+# GTK platform theme, GDAL, etc.). Starter set (SRS FR-G1).
+{
+   glib-type-init
+   Memcheck:Leak
+   match-leak-kinds: possible,reachable
+   ...
+   fun:g_type_register_static
+}
+{
+   glib-quark-table
+   Memcheck:Leak
+   match-leak-kinds: possible,reachable
+   ...
+   fun:g_quark_from_static_string
+}
+{
+   glib-malloc0-once
+   Memcheck:Leak
+   match-leak-kinds: possible,reachable
+   fun:malloc
+   ...
+   fun:g_malloc0
+   ...
+   fun:g_once_impl
+}
+{
+   glib-mainloop-context
+   Memcheck:Leak
+   match-leak-kinds: possible,reachable
+   ...
+   fun:g_main_context_new
+}

@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+# SPDX-License-Identifier: MIT
+#
+# Valgrind suppressions for Qt6 internals (SRS FR-G1). One-time allocations
+# Qt keeps alive for the process lifetime; not QGIS bugs. Starter set.
+{
+   qt-plugin-dlopen-leak
+   Memcheck:Leak
+   match-leak-kinds: possible,reachable
+   ...
+   fun:dlopen*
+}
+{
+   qt-library-loader
+   Memcheck:Leak
+   match-leak-kinds: possible,reachable
+   ...
+   fun:*QLibraryPrivate*load*
+}
+{
+   qt-application-fonts
+   Memcheck:Leak
+   match-leak-kinds: possible,reachable
+   ...
+   fun:*QFontDatabase*
+}
+{
+   fontconfig-cache
+   Memcheck:Leak
+   match-leak-kinds: possible,reachable
+   ...
+   obj:*/libfontconfig.so*
+}
+{
+   xcb-connect
+   Memcheck:Leak
+   match-leak-kinds: possible,reachable
+   ...
+   obj:*/libxcb.so*
+}
+{
+   qt-global-statics
+   Memcheck:Leak
+   match-leak-kinds: possible,reachable
+   ...
+   fun:*QGlobalStatic*
+}

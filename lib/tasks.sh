@@ -1,0 +1,685 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+# SPDX-License-Identifier: MIT
+#
+# qgis-dev — the single task implementation behind both `nix run .#<task>`
+# and the Neovim <leader>p project menu (SRS FR-N4, NFR-M1).
+set -euo pipefail
+
+die() {
+  printf 'qgis-dev: error: %s\n' "$*" >&2
+  exit 1
+}
+note() { printf '▸ %s\n' "$*" >&2; }
+
+STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}/qgis-dev-env"
+BUILD_LOG="$STATE_HOME/build-log.tsv"
+mkdir -p "$STATE_HOME"
+
+ROOT=""
+SIDECAR=""
+BUILD=""
+STATE=""
+
+init() {
+  ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" ||
+    die "not inside a git checkout (run from a QGIS worktree)"
+  [[ -f "$ROOT/CMakeLists.txt" && -d "$ROOT/src/core" ]] ||
+    die "'$ROOT' does not look like a QGIS checkout"
+  if [[ -n "${QGIS_DEV_SIDECAR:-}" ]]; then
+    SIDECAR="$QGIS_DEV_SIDECAR"
+  elif [[ -f "$ROOT/.dev-env/sidecar" ]]; then
+    SIDECAR="$(cat "$ROOT/.dev-env/sidecar")"
+  elif [[ -L "$ROOT/.envrc" ]]; then
+    SIDECAR="$(dirname "$(dirname "$(readlink -f "$ROOT/.envrc")")")"
+  else
+    die "cannot locate the qgis-dev-env sidecar (re-run bootstrap.sh)"
+  fi
+  BUILD="$ROOT/build"
+  STATE="$ROOT/.dev-env"
+  mkdir -p "$STATE"
+}
+
+current_profile() { cat "$STATE/profile" 2>/dev/null || echo debug; }
+
+# ---------------------------------------------------------------- perf mode
+perf_tool() { command -v powerprofilesctl || true; }
+
+perf_set() {
+  local tool
+  tool="$(perf_tool)"
+  if [[ -z "$tool" ]]; then
+    note "powerprofilesctl not found — performance mode unavailable on this host"
+    return 0
+  fi
+  "$tool" set "$1" 2>/dev/null || note "could not set power profile '$1'"
+}
+
+perf_get() {
+  local tool
+  tool="$(perf_tool)"
+  if [[ -n "$tool" ]]; then "$tool" get 2>/dev/null || echo unknown; else echo unavailable; fi
+}
+
+cmd_perf() {
+  local marker="$STATE_HOME/perf-during-build"
+  case "${1:-status}" in
+  on)
+    perf_set performance
+    note "power profile now: $(perf_get)"
+    ;;
+  off)
+    perf_set balanced
+    note "power profile now: $(perf_get)"
+    ;;
+  build-toggle)
+    if [[ -f "$marker" ]]; then
+      rm -f "$marker"
+      note "build-time performance boost: OFF"
+    else
+      touch "$marker"
+      note "build-time performance boost: ON (performance profile during builds, restored after)"
+    fi
+    ;;
+  status)
+    note "power profile now: $(perf_get)"
+    if [[ -f "$marker" ]]; then note "build-time boost: on"; else note "build-time boost: off"; fi
+    ;;
+  *) die "usage: qgis-dev perf [on|off|build-toggle|status]" ;;
+  esac
+}
+
+# ------------------------------------------------------------- ccache delta
+ccache_counters() { # prints "<hits> <misses>"
+  local hits=0 misses=0 key value
+  if command -v ccache >/dev/null; then
+    while read -r key value _; do
+      case "$key" in
+      direct_cache_hit | preprocessed_cache_hit) hits=$((hits + value)) ;;
+      cache_miss) misses=$((misses + value)) ;;
+      esac
+    done < <(ccache --print-stats 2>/dev/null || true)
+  fi
+  echo "$hits $misses"
+}
+
+# ------------------------------------------------------------ configure/build
+cmd_configure() {
+  local prof pf
+  prof="$(current_profile)"
+  pf="$SIDECAR/profiles/$prof.profile"
+  [[ -f "$pf" ]] || die "unknown build profile '$prof' (available: $(cmd_profile list | tr '\n' ' '))"
+  local -a CMAKE_ARGS=(
+    -G Ninja
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    -DCMAKE_C_COMPILER_LAUNCHER=ccache
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+    -DCMAKE_INSTALL_PREFIX="$BUILD/app"
+  )
+  [[ -n "${QGIS_DEV_QT_PLUGINS_DIR:-}" ]] && CMAKE_ARGS+=(-DQT_PLUGINS_DIR="$QGIS_DEV_QT_PLUGINS_DIR")
+  [[ -n "${QGIS_DEV_QSCI_SIP_DIR:-}" ]] && CMAKE_ARGS+=(-DQSCI_SIP_DIR="$QGIS_DEV_QSCI_SIP_DIR")
+  [[ -n "${QGIS_DEV_QSCI_DIST_INFO:-}" ]] && CMAKE_ARGS+=(-DQSCI_DIST_INFO="$QGIS_DEV_QSCI_DIST_INFO")
+  [[ -n "${QGIS_DEV_PYQT6_DIST_INFO:-}" ]] && CMAKE_ARGS+=(-DPYQT6_DIST_INFO="$QGIS_DEV_PYQT6_DIST_INFO")
+  # shellcheck source=/dev/null
+  source "$pf" # profile fragments append to CMAKE_ARGS
+  note "configuring profile '$prof' → $BUILD"
+  cmake -S "$ROOT" -B "$BUILD" "${CMAKE_ARGS[@]}" "$@"
+}
+
+log_build() { # ts branch profile targets jobs duration hitpct result
+  if [[ ! -s "$BUILD_LOG" ]]; then
+    printf 'timestamp\thost\tworktree\tbranch\tprofile\ttargets\tjobs\tduration_s\tccache_hit_pct\tresult\n' >"$BUILD_LOG"
+  fi
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$@" >>"$BUILD_LOG"
+}
+
+cmd_build() {
+  local -a ninja_args=() targets=()
+  local jobs=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -j)
+      jobs="$2"
+      ninja_args+=(-j "$2")
+      shift
+      ;;
+    -j*)
+      jobs="${1#-j}"
+      ninja_args+=("$1")
+      ;;
+    *) targets+=("$1") ;;
+    esac
+    shift
+  done
+  [[ -n "$jobs" ]] || jobs="$(nproc)" # ninja defaults to all cores (FR: all-cores builds)
+  [[ -f "$BUILD/build.ninja" ]] || cmd_configure
+
+  local prof boost=0 prev_power=""
+  prof="$(current_profile)"
+  if [[ -f "$STATE_HOME/perf-during-build" ]]; then
+    boost=1
+    prev_power="$(perf_get)"
+    perf_set performance
+    note "performance boost active (was: $prev_power)"
+  fi
+  restore_power() {
+    if [[ "$boost" -eq 1 ]]; then perf_set "${prev_power:-balanced}"; fi
+  }
+  trap restore_power EXIT
+
+  local h0 m0 h1 m1 t0 t1 rc=0
+  read -r h0 m0 <<<"$(ccache_counters)"
+  t0="$(date +%s)"
+  CCACHE_NAMESPACE="$prof" ninja -C "$BUILD" "${ninja_args[@]}" "${targets[@]}" || rc=$?
+  t1="$(date +%s)"
+  read -r h1 m1 <<<"$(ccache_counters)"
+
+  local dh=$((h1 - h0)) dm=$((m1 - m0)) pct="-" dur=$((t1 - t0)) result=ok branch
+  ((dh + dm > 0)) && pct=$((100 * dh / (dh + dm)))
+  [[ "$rc" -eq 0 ]] || result=fail
+  branch="$(git -C "$ROOT" branch --show-current 2>/dev/null || echo -)"
+  log_build "$(date -Is)" "$(hostname)" "$ROOT" "$branch" "$prof" \
+    "${targets[*]:-all}" "$jobs" "$dur" "$pct" "$result"
+  note "build $result: ${dur}s, ccache hit rate ${pct}% (log: $BUILD_LOG)"
+  trap - EXIT
+  restore_power
+  return "$rc"
+}
+
+cmd_stats() {
+  [[ -s "$BUILD_LOG" ]] || die "no builds logged yet"
+  local n="${1:-20}" graph=0
+  [[ "${1:-}" == "--graph" ]] && {
+    graph=1
+    n=200
+  }
+  {
+    head -1 "$BUILD_LOG"
+    tail -n "+2" "$BUILD_LOG" | tail -n "$n"
+  } | cut -f1,4,5,6,7,8,9,10 | column -t -s"$(printf '\t')"
+  echo
+  tail -n "+2" "$BUILD_LOG" | tail -n "$n" | awk -F'\t' '
+    { d[NR]=$8; sum+=$8; if (min==""||$8<min) min=$8; if ($8>max) max=$8 }
+    END {
+      if (NR==0) exit
+      split("▁▂▃▄▅▆▇█", blocks, "")
+      printf "trend  "
+      for (i=1; i<=NR; i++) {
+        idx = (max>min) ? int(((d[i]-min)/(max-min))*7)+1 : 1
+        printf "%s", blocks[idx]
+      }
+      printf "\nbuilds %d   avg %.0fs   min %ds   max %ds\n", NR, sum/NR, min, max
+    }'
+  if [[ "$graph" -eq 1 ]]; then
+    command -v gnuplot >/dev/null || die "gnuplot not available (enter the devshell)"
+    local out="$STATE_HOME/build-times.svg"
+    gnuplot <<EOF
+set terminal svg size 1000,400 background rgb "white"
+set output "$out"
+set title "QGIS build times"
+set ylabel "seconds"
+set xlabel "build #"
+set grid
+plot "<tail -n +2 '$BUILD_LOG'" using 8 with linespoints title "duration (s)"
+EOF
+    note "graph written: $out"
+  fi
+}
+
+# --------------------------------------------------------------- run / test
+cmd_run() {
+  local bin="$BUILD/output/bin/qgis"
+  [[ -x "$bin" ]] || die "no built binary at $bin — run 'qgis-dev build' first"
+  mkdir -p "$STATE/profiles"
+  note "launching $bin (isolated profile under .dev-env/profiles — your real QGIS profile is safe)"
+  QGIS_PREFIX_PATH="$BUILD/output" "$bin" --profiles-path "$STATE/profiles" "$@"
+}
+
+cmd_test() {
+  [[ -f "$BUILD/build.ninja" ]] || die "not configured — run 'qgis-dev configure' first"
+  (cd "$BUILD" && QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" ctest --output-on-failure "$@")
+}
+
+cmd_test_file() {
+  local f="${1:?usage: qgis-dev test-file <path>}"
+  local name
+  name="$(basename "$f")"
+  name="${name%.*}"
+  note "running ctest matching '$name'"
+  cmd_test -R "$name"
+}
+
+# --------------------------------------------------------------------- docs
+cmd_docs() { cmd_build apidoc; }
+
+cmd_docs_serve() {
+  local idx dir
+  idx="$(find "$BUILD/doc" -name index.html 2>/dev/null | head -1 || true)"
+  [[ -n "$idx" ]] || die "no built docs found — run 'qgis-dev docs' first"
+  dir="$(dirname "$idx")"
+  note "serving $dir at http://localhost:8000 (Ctrl-C to stop)"
+  python3 -m http.server 8000 -d "$dir"
+}
+
+# --------------------------------------------------------- standards / hooks
+cmd_precommit() {
+  command -v pre-commit >/dev/null || die "pre-commit not available (enter the devshell)"
+  local -a files=() existing=()
+  if [[ "${1:-}" == "--branch" ]]; then
+    local base
+    base="$(git -C "$ROOT" merge-base origin/master HEAD 2>/dev/null)" ||
+      die "cannot find merge-base with origin/master"
+    mapfile -t files < <(git -C "$ROOT" diff --name-only "$base"..HEAD)
+  else
+    mapfile -t files < <(
+      {
+        git -C "$ROOT" diff --name-only HEAD
+        git -C "$ROOT" diff --cached --name-only
+      } | sort -u
+    )
+  fi
+  local f
+  for f in "${files[@]}"; do [[ -f "$ROOT/$f" ]] && existing+=("$f"); done
+  if [[ "${#existing[@]}" -eq 0 ]]; then
+    note "no changed files — nothing to check"
+    return 0
+  fi
+  note "pre-commit over ${#existing[@]} file(s)"
+  (cd "$ROOT" && pre-commit run --files "${existing[@]}")
+}
+
+cmd_tidy() {
+  local f="${1:?usage: qgis-dev tidy <file>}"
+  command -v clang-tidy >/dev/null || die "clang-tidy not available (enter the devshell)"
+  [[ -f "$BUILD/compile_commands.json" ]] || die "no compile_commands.json — run 'qgis-dev configure'"
+  clang-tidy -p "$BUILD" "$f"
+}
+
+cmd_tags() {
+  command -v ctags >/dev/null || die "ctags not available (enter the devshell)"
+  note "regenerating supplementary tags (SIP, CMake, shell) → .dev-env/tags"
+  (cd "$ROOT" && find . \( -path ./build -o -path ./.git -o -path ./external \) -prune -o \
+    -type f \( -name '*.sip' -o -name '*.sip.in' -o -name 'CMakeLists.txt' \
+    -o -name '*.cmake' -o -name '*.sh' \) -print |
+    ctags -L - -o "$STATE/tags" --tag-relative=yes 2>/dev/null)
+  note "done: $(wc -l <"$STATE/tags") tag entries"
+}
+
+# ------------------------------------------------------------ cmake tweaking
+cmd_flags() {
+  [[ -f "$BUILD/CMakeCache.txt" ]] || die "not configured yet — run 'qgis-dev configure'"
+  grep -E '^(WITH_|ENABLE_|BUILD_|CMAKE_BUILD_TYPE)[A-Z0-9_]*:' "$BUILD/CMakeCache.txt" | sort
+}
+
+cmd_targets() {
+  [[ -f "$BUILD/build.ninja" ]] || die "not configured yet — run 'qgis-dev configure'"
+  ninja -C "$BUILD" -t targets depth 1 2>/dev/null | cut -d: -f1 | sort
+}
+
+cmd_profile() {
+  case "${1:-}" in
+  "") current_profile ;;
+  list)
+    local p
+    for p in "$SIDECAR"/profiles/*.profile; do basename "$p" .profile; done
+    ;;
+  *)
+    [[ -f "$SIDECAR/profiles/$1.profile" ]] ||
+      die "no such profile '$1' (available: $(cmd_profile list | tr '\n' ' '))"
+    echo "$1" >"$STATE/profile"
+    note "build profile set to '$1' — reconfiguring"
+    cmd_configure
+    ;;
+  esac
+}
+
+# ------------------------------------------------------------------ worktree
+cmd_worktree() {
+  local sub="${1:-list}"
+  shift || true
+  case "$sub" in
+  add)
+    local branch="${1:?usage: qgis-dev worktree add <branch> [<base>]}" base="${2:-master}"
+    local safe dir
+    safe="${branch//\//-}"
+    dir="$(dirname "$ROOT")/$(basename "$ROOT")-$safe"
+    [[ -e "$dir" ]] && die "$dir already exists"
+    if git -C "$ROOT" show-ref --verify --quiet "refs/heads/$branch"; then
+      git -C "$ROOT" worktree add "$dir" "$branch"
+    else
+      git -C "$ROOT" worktree add -b "$branch" "$dir" "$base"
+    fi
+    "$SIDECAR/bootstrap.sh" "$dir"
+    note "worktree ready: $dir (bootstrapped; ccache is shared, so builds start warm)"
+    ;;
+  list) git -C "$ROOT" worktree list ;;
+  porcelain) git -C "$ROOT" worktree list --porcelain ;;
+  status)
+    local wt branch dirty ahead size
+    printf '%-50s %-30s %6s %8s %8s\n' WORKTREE BRANCH DIRTY AHEAD BUILD
+    while read -r wt; do
+      branch="$(git -C "$wt" branch --show-current 2>/dev/null || echo '?')"
+      dirty="$(git -C "$wt" status --porcelain 2>/dev/null | wc -l)"
+      ahead="$(git -C "$wt" rev-list --count '@{upstream}..HEAD' 2>/dev/null || echo '-')"
+      size="$(du -sh "$wt/build" 2>/dev/null | cut -f1 || true)"
+      printf '%-50s %-30s %6s %8s %8s\n' "$wt" "$branch" "$dirty" "$ahead" "${size:--}"
+    done < <(git -C "$ROOT" worktree list --porcelain | awk '/^worktree /{print $2}')
+    ;;
+  remove)
+    local dir="${1:?usage: qgis-dev worktree remove <path> [--force]}" force="${2:-}"
+    [[ -d "$dir" ]] || die "no such worktree: $dir"
+    if [[ "$force" != "--force" ]]; then
+      [[ -z "$(git -C "$dir" status --porcelain)" ]] ||
+        die "worktree has uncommitted changes — commit/stash them or pass --force"
+      if ! git -C "$dir" rev-parse --abbrev-ref '@{upstream}' >/dev/null 2>&1; then
+        die "branch has no upstream (nothing pushed) — pass --force to remove anyway"
+      fi
+      [[ -z "$(git -C "$dir" rev-list '@{upstream}..HEAD' 2>/dev/null)" ]] ||
+        die "branch has unpushed commits — push them or pass --force"
+    fi
+    rm -rf "$dir/build" "$dir/.dev-env"
+    if [[ "$force" == "--force" ]]; then
+      git -C "$ROOT" worktree remove --force "$dir"
+    else
+      git -C "$ROOT" worktree remove "$dir"
+    fi
+    note "removed $dir (shared ccache untouched)"
+    ;;
+  prune) git -C "$ROOT" worktree prune -v ;;
+  *) die "usage: qgis-dev worktree [add|list|status|remove|prune]" ;;
+  esac
+}
+
+# ------------------------------------------------------------------------ QA
+diag_dir() {
+  local d
+  d="$STATE/diagnostics/$(date +%Y%m%d-%H%M%S)-$1"
+  mkdir -p "$d"
+  printf '%s\n' "$d"
+}
+
+qa_exe() { # default to the qgis binary; accept an explicit executable
+  if [[ -n "${1:-}" && -x "${1:-}" ]]; then printf '%s\n' "$1"; else printf '%s\n' "$BUILD/output/bin/qgis"; fi
+}
+
+memcheck_to_locations() { # valgrind log → "path:line: message" lines
+  local log="$1" map="$STATE/filemap.tsv"
+  if [[ ! -s "$map" ]]; then
+    (cd "$ROOT" && find src -type f \( -name '*.cpp' -o -name '*.h' \) -printf '%f\t%p\n' >"$map")
+  fi
+  gawk -v mapfile="$map" -v root="$ROOT" '
+    BEGIN {
+      while ((getline line < mapfile) > 0) {
+        split(line, a, "\t")
+        if (!(a[1] in m)) m[a[1]] = a[2]
+      }
+    }
+    /^==[0-9]+== [0-9,]+ bytes/ || /Invalid (read|write)/ || /Conditional jump/ || /uninitialised/ {
+      head = $0; sub(/^==[0-9]+== */, "", head); found = 0
+    }
+    match($0, /\(([A-Za-z0-9_.-]+\.(cpp|h)):([0-9]+)\)/, g) {
+      if (!found && (g[1] in m)) {
+        printf "%s/%s:%s: %s\n", root, m[g[1]], g[3], head
+        found = 1
+      }
+    }' "$log"
+}
+
+cmd_qa() {
+  local tool="${1:-list}"
+  shift || true
+  case "$tool" in
+  memcheck)
+    command -v valgrind >/dev/null || die "valgrind not available (enter the devshell)"
+    local exe d supp=()
+    exe="$(qa_exe "${1:-}")"
+    [[ $# -gt 0 && -x "${1:-}" ]] && shift
+    d="$(diag_dir memcheck)"
+    local f
+    for f in "$SIDECAR"/suppressions/*.supp; do supp+=("--suppressions=$f"); done
+    note "valgrind memcheck → $d/valgrind.log"
+    note "(slow — for most memory bugs 'qgis-dev qa asan' is the better first tool)"
+    mkdir -p "$STATE/profiles"
+    QGIS_PREFIX_PATH="$BUILD/output" valgrind --leak-check=full --num-callers=25 \
+      "${supp[@]}" --log-file="$d/valgrind.log" \
+      "$exe" --profiles-path "$STATE/profiles" "$@" || true
+    memcheck_to_locations "$d/valgrind.log"
+    note "full log: $d/valgrind.log"
+    ;;
+  asan)
+    local target="${1:-qgis}" d exe
+    shift || true
+    note "switching to 'asan-ubsan' profile (was: $(current_profile))"
+    echo asan-ubsan >"$STATE/profile"
+    cmd_configure
+    cmd_build "$target"
+    d="$(diag_dir asan)"
+    exe="$BUILD/output/bin/qgis"
+    [[ "$target" != qgis && -x "$BUILD/output/bin/$target" ]] && exe="$BUILD/output/bin/$target"
+    note "running $exe under ASan/UBSan…"
+    mkdir -p "$STATE/profiles"
+    ASAN_OPTIONS="log_path=$d/asan:halt_on_error=0:detect_leaks=1" \
+      UBSAN_OPTIONS="log_path=$d/ubsan:print_stacktrace=1" \
+      QGIS_PREFIX_PATH="$BUILD/output" "$exe" --profiles-path "$STATE/profiles" "$@" || true
+    cat "$d"/asan.* "$d"/ubsan.* 2>/dev/null || note "no sanitizer reports — clean run"
+    note "reports (if any) in $d; switch back with 'qgis-dev profile debug'"
+    ;;
+  heaptrack)
+    command -v heaptrack >/dev/null || die "heaptrack not available (enter the devshell)"
+    local exe d
+    exe="$(qa_exe "${1:-}")"
+    d="$(diag_dir heaptrack)"
+    mkdir -p "$STATE/profiles"
+    note "heaptrack → $d"
+    QGIS_PREFIX_PATH="$BUILD/output" heaptrack -o "$d/heaptrack" \
+      "$exe" --profiles-path "$STATE/profiles" || true
+    if command -v heaptrack_gui >/dev/null; then heaptrack_gui "$d"/heaptrack.* & fi
+    ;;
+  perf)
+    command -v perf >/dev/null || die "perf not available (enter the devshell; see README for kernel.perf_event_paranoid)"
+    local exe d
+    exe="$(qa_exe "${1:-}")"
+    d="$(diag_dir perf)"
+    mkdir -p "$STATE/profiles"
+    note "perf record (dwarf call graphs) → $d/perf.data"
+    QGIS_PREFIX_PATH="$BUILD/output" perf record -g --call-graph dwarf -o "$d/perf.data" -- \
+      "$exe" --profiles-path "$STATE/profiles" || true
+    if command -v hotspot >/dev/null; then
+      hotspot "$d/perf.data" &
+    else
+      note "open with: perf report -i $d/perf.data"
+    fi
+    ;;
+  callgrind)
+    command -v valgrind >/dev/null || die "valgrind not available (enter the devshell)"
+    local exe d
+    exe="$(qa_exe "${1:-}")"
+    d="$(diag_dir callgrind)"
+    mkdir -p "$STATE/profiles"
+    QGIS_PREFIX_PATH="$BUILD/output" valgrind --tool=callgrind \
+      --callgrind-out-file="$d/callgrind.out" \
+      "$exe" --profiles-path "$STATE/profiles" || true
+    if command -v kcachegrind >/dev/null; then kcachegrind "$d/callgrind.out" & fi
+    note "callgrind data: $d/callgrind.out"
+    ;;
+  cppcheck)
+    command -v cppcheck >/dev/null || die "cppcheck not available (enter the devshell)"
+    local path="${1:-$ROOT/src/core}"
+    cppcheck --enable=warning,style,performance --inline-suppr --quiet \
+      --template='{file}:{line}: {severity}: {message}' "$path"
+    ;;
+  gammaray)
+    command -v gammaray >/dev/null || die "gammaray not available (see SRS FR-G7)"
+    local pid
+    pid="$(pgrep -n -f "$BUILD/output/bin/qgis" || true)"
+    if [[ -n "$pid" ]]; then
+      note "attaching GammaRay to running QGIS (pid $pid)"
+      gammaray --pid "$pid" &
+    else
+      die "no running QGIS from this build tree — start it with 'qgis-dev run' first"
+    fi
+    ;;
+  list)
+    if [[ -d "$STATE/diagnostics" ]]; then
+      find "$STATE/diagnostics" -mindepth 1 -maxdepth 1 -type d | sort
+    else
+      note "no diagnostic reports yet"
+    fi
+    ;;
+  *) die "usage: qgis-dev qa [memcheck|asan|heaptrack|perf|callgrind|cppcheck|gammaray|list]" ;;
+  esac
+}
+
+# -------------------------------------------------------------------- doctor
+cmd_doctor() {
+  local fails=0
+  ok() { printf '  \342\234\223 %s\n' "$*"; }
+  bad() {
+    printf '  \342\234\227 %s\n' "$*"
+    fails=$((fails + 1))
+  }
+  echo "qgis-dev doctor — $ROOT"
+  local b
+  for b in cmake ninja ccache clangd basedpyright pre-commit valgrind mold; do
+    if command -v "$b" >/dev/null; then ok "$b available"; else bad "$b missing (devshell inactive? run 'direnv allow')"; fi
+  done
+  if [[ -d "$SIDECAR" ]]; then ok "sidecar: $SIDECAR"; else bad "sidecar directory missing"; fi
+  if [[ -L "$ROOT/.envrc" ]]; then ok ".envrc symlink in place"; else bad ".envrc missing or not a symlink (re-run bootstrap.sh)"; fi
+  if [[ -f "$BUILD/compile_commands.json" ]]; then ok "compile_commands.json present"; else bad "no compile_commands.json (run 'qgis-dev configure')"; fi
+  local common
+  common="$(cd "$ROOT" && readlink -f "$(git rev-parse --git-common-dir)")"
+  if grep -q 'qgis-dev-env' "$common/info/exclude" 2>/dev/null; then ok "git exclude block registered"; else bad "exclude block missing (re-run bootstrap.sh)"; fi
+  if [[ -e "$common/hooks/pre-push" ]]; then ok "anti-leak pre-push guard installed"; else bad "pre-push guard missing"; fi
+  if [[ -e "$common/hooks/pre-commit" ]]; then ok "pre-commit hooks installed"; else bad "pre-commit hooks not installed (run 'pre-commit install' in the checkout)"; fi
+  # Isolation across every worktree (FR-W7, FR-I4)
+  local wt leaks
+  while read -r wt; do
+    leaks="$(git -C "$wt" status --porcelain 2>/dev/null |
+      grep -cE '(\.envrc|\.nvim\.lua|\.exrc|\.clangd|pyrightconfig\.json|PROMPT\.log|SRS-qgis-dev-env\.md|\.dev-env)' || true)"
+    if [[ "$leaks" -eq 0 ]]; then
+      ok "isolation intact: $wt"
+    else
+      bad "OVERLAY FILES VISIBLE to upstream git in $wt — unstage them now (git restore --staged <file>)"
+    fi
+  done < <(git -C "$ROOT" worktree list --porcelain | awk '/^worktree /{print $2}')
+  if [[ "$fails" -eq 0 ]]; then
+    note "all checks passed"
+  else
+    die "$fails check(s) failed"
+  fi
+}
+
+usage() {
+  cat <<'EOF'
+qgis-dev — QGIS developer tasks (shared by `nix run .#<task>` and Neovim)
+
+  configure [-DVAR=VAL…]     cmake-configure build/ with the active profile
+  build [-jN] [target…]      ninja build (all cores by default; timed + logged)
+  clean                      ninja clean
+  run [args…]                launch built QGIS with an isolated profile
+  test [ctest args…]         run ctest (offscreen)
+  test-file <path>           run the test matching a source file
+  docs | docs-serve          build / serve the API docs
+  precommit [--branch]       QGIS pre-commit hooks on changed files (or branch diff)
+  tidy <file>                clang-tidy one file
+  tags                       regenerate supplementary ctags (SIP/CMake/shell)
+  flags | targets            list cmake cache flags / ninja targets
+  profile [name|list]        show / switch build profile (reconfigures)
+  worktree <add|list|status|remove|prune>
+  qa <memcheck|asan|heaptrack|perf|callgrind|cppcheck|gammaray|list>
+  stats [N|--graph]          build-time history (table + trend; svg with --graph)
+  perf [on|off|build-toggle|status]   CPU performance mode control
+  ccache-stats | ccache-zero
+  doctor                     health + isolation check (all worktrees)
+EOF
+}
+
+cmd="${1:-help}"
+shift || true
+case "$cmd" in
+help | --help | -h) usage ;;
+stats) cmd_stats "$@" ;;
+perf)
+  # deliberately no init — perf mode is host-level and works outside a checkout
+  cmd_perf "$@"
+  ;;
+configure)
+  init
+  cmd_configure "$@"
+  ;;
+build)
+  init
+  cmd_build "$@"
+  ;;
+clean)
+  init
+  note "cleaning $BUILD"
+  ninja -C "$BUILD" clean
+  ;;
+run)
+  init
+  cmd_run "$@"
+  ;;
+test)
+  init
+  cmd_test "$@"
+  ;;
+test-file)
+  init
+  cmd_test_file "$@"
+  ;;
+docs)
+  init
+  cmd_docs
+  ;;
+docs-serve)
+  init
+  cmd_docs_serve
+  ;;
+precommit)
+  init
+  cmd_precommit "$@"
+  ;;
+tidy)
+  init
+  cmd_tidy "$@"
+  ;;
+tags)
+  init
+  cmd_tags
+  ;;
+flags)
+  init
+  cmd_flags
+  ;;
+targets)
+  init
+  cmd_targets
+  ;;
+profile)
+  init
+  cmd_profile "$@"
+  ;;
+worktree)
+  init
+  cmd_worktree "$@"
+  ;;
+qa)
+  init
+  cmd_qa "$@"
+  ;;
+ccache-stats)
+  command -v ccache >/dev/null || die "ccache not available"
+  ccache -s
+  ;;
+ccache-zero)
+  command -v ccache >/dev/null || die "ccache not available"
+  ccache -z
+  note "ccache statistics zeroed"
+  ;;
+doctor)
+  init
+  cmd_doctor
+  ;;
+*) die "unknown command '$cmd' — see 'qgis-dev help'" ;;
+esac

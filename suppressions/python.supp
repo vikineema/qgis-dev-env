@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+# SPDX-License-Identifier: MIT
+#
+# Valgrind suppressions for CPython's pymalloc allocator (SRS FR-G1).
+# PyQGIS embeds the interpreter; pymalloc reads uninitialised arena words by
+# design and drowns real leaks without these. Starter set — extend as new
+# false positives are met (based on CPython's Misc/valgrind-python.supp).
+{
+   pymalloc-cond
+   Memcheck:Cond
+   ...
+   fun:PyObject_Free
+}
+{
+   pymalloc-value8-free
+   Memcheck:Value8
+   ...
+   fun:PyObject_Free
+}
+{
+   pymalloc-addr-free
+   Memcheck:Addr4
+   ...
+   fun:PyObject_Free
+}
+{
+   pymalloc-cond-realloc
+   Memcheck:Cond
+   ...
+   fun:PyObject_Realloc
+}
+{
+   pymalloc-value8-realloc
+   Memcheck:Value8
+   ...
+   fun:PyObject_Realloc
+}
+{
+   pymalloc-addr-realloc
+   Memcheck:Addr4
+   ...
+   fun:PyObject_Realloc
+}
+{
+   python-interned-strings-leak
+   Memcheck:Leak
+   match-leak-kinds: possible,reachable
+   ...
+   fun:PyUnicode_InternInPlace
+}
+{
+   python-import-leak
+   Memcheck:Leak
+   match-leak-kinds: possible,reachable
+   ...
+   fun:PyImport_ImportModule*
+}
