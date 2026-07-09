@@ -20,3 +20,7 @@ export CCACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/qgis-ccache"
 watch_file "$_qde_sidecar/flake.nix"
 watch_file "$_qde_sidecar/flake.lock"
 use flake "path:$_qde_sidecar"
+
+# Activation banner on every direnv load. (The flake's shellHook also shows
+# it, but nix-direnv caches shellHook output — .envrc runs every time.)
+source "$_qde_sidecar/lib/shell-motd.sh"
