@@ -103,7 +103,7 @@ graph TB
     subgraph "QGIS checkout (upstream git — never touched)"
         Q[tracked sources<br/>flake.nix, src/, python/ …]
         X[.git/info/exclude<br/>local-only, never committed]
-        S[symlinks: .envrc, .nvim.lua,<br/>.clangd, SRS, PROMPT.log …]
+        S[symlinks: .envrc, .nvim.lua,<br/>.clangd … + local PROMPT.log]
         BD[build/ — Ninja + ccache artefacts]
     end
 
@@ -254,9 +254,9 @@ Priorities: **M**ust, **S**hould, **C**ould (MoSCoW).
 
 | ID | Pri | Requirement |
 |----|-----|-------------|
-| FR-I1 | M | All overlay artefacts live in a standalone git repo `qgis-dev-env`, hosted under the Kartoza GitHub organisation, cloneable by colleagues. |
+| FR-I1 | M | All overlay artefacts live in a standalone git repo `qgis-dev-env`, hosted on GitHub (`github.com/timlinux/qgis-dev-env`; may later move to the Kartoza organisation), cloneable by colleagues. |
 | FR-I2 | M | A bootstrap command (`./bootstrap.sh <qgis-checkout>` and `nix run .#bootstrap`) symlinks overlay files into the checkout and **idempotently** appends each symlink name to `<checkout>/.git/info/exclude`. Running it twice produces no duplicates and no errors. |
-| FR-I3 | M | Overlay files placed in the checkout are limited to: `.envrc`, `.nvim.lua`, `.exrc`, `.clangd`, `.ccache/`, `pyrightconfig.json`, `PROMPT.log`, `SRS-qgis-dev-env.md`, `.dev-env` (marker/state dir). No tracked upstream file is modified. |
+| FR-I3 | M | Overlay files placed in the checkout are limited to: `.envrc`, `.nvim.lua`, `.exrc`, `.clangd`, `pyrightconfig.json`, `PROMPT.log`, `.dev-env` (state dir). No tracked upstream file is modified. This SRS itself lives **only** in the sidecar (`SPECIFICATION.md`), not in the checkout. |
 | FR-I4 | M | A guard verifies isolation: `nix run .#doctor` (and `<leader>pv` in Neovim) runs `git -C <checkout> status --porcelain` and fails loudly if any overlay artefact is visible to upstream git. |
 | FR-I5 | M | An **anti-leak pre-push guard**: bootstrap installs a `pre-push` hook *only if the checkout has none*, refusing to push any commit that adds an overlay-owned path; if upstream ever ships hooks, the guard is layered via `core.hooksPath` chaining instead. The hook itself lives in `qgis-dev-env` and is symlinked. |
 | FR-I6 | M | `bootstrap.sh --remove` cleanly unlinks everything and strips the exclude entries, restoring a pristine checkout. |

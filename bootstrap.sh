@@ -29,7 +29,6 @@ LINKS=(
   ".exrc:overlay/exrc"
   ".clangd:overlay/clangd.yaml"
   "pyrightconfig.json:overlay/pyrightconfig.json"
-  "SRS-qgis-dev-env.md:SPECIFICATION.md"
 )
 
 # everything upstream git must locally ignore (FR-I3)
@@ -39,7 +38,7 @@ EXCLUDES=(
   ".exrc"
   ".clangd"
   "pyrightconfig.json"
-  "SRS-qgis-dev-env.md"
+  "SRS-qgis-dev-env.md" # legacy symlink from pre-0.2 bootstraps
   "PROMPT.log"
   ".dev-env/"
   ".direnv/"

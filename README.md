@@ -22,7 +22,7 @@ The complete requirements live in [SPECIFICATION.md](SPECIFICATION.md).
 git clone git@github.com:qgis/QGIS.git ~/dev/cpp/QGIS
 
 # 2. this sidecar, NEXT TO it (never inside it)
-git clone git@github.com:kartoza/qgis-dev-env.git ~/dev/nix/qgis-dev-env
+git clone git@github.com:timlinux/qgis-dev-env.git ~/dev/nix/qgis-dev-env
 
 # 3. overlay the checkout (idempotent; never touches tracked files)
 ~/dev/nix/qgis-dev-env/bootstrap.sh ~/dev/cpp/QGIS
@@ -90,4 +90,4 @@ leak there. Three layers enforce that (SRS group I):
 
 ---
 
-*Made with 💗 by [Kartoza](https://kartoza.com) | [Donate!](https://github.com/sponsors/kartoza) | [GitHub](https://github.com/kartoza/qgis-dev-env)*
+*Made with 💗 by [Kartoza](https://kartoza.com) | [Donate!](https://github.com/sponsors/timlinux) | [GitHub](https://github.com/timlinux/qgis-dev-env)*

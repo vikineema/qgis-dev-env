@@ -1,7 +1,7 @@
 version = 1
 SPDX-PackageName = "qgis-dev-env"
 SPDX-PackageSupplier = "Kartoza (Pty) Ltd <tim@kartoza.com>"
-SPDX-PackageDownloadLocation = "https://github.com/kartoza/qgis-dev-env"
+SPDX-PackageDownloadLocation = "https://github.com/timlinux/qgis-dev-env"
 
 [[annotations]]
 path = [
