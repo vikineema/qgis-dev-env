@@ -188,6 +188,15 @@
       apps = forAllSystems (
         pkgs: system:
         let
+          # mkdocs stack — used directly on PATH (no nested `nix develop`,
+          # which would require nix-command to be enabled system-wide).
+          docsPython = pkgs.python3.withPackages (ps: [
+            ps.mkdocs
+            ps.mkdocs-material
+            ps.mkdocs-material-extensions
+            ps.mkdocs-glightbox
+            ps.mkdocs-git-revision-date-localized-plugin
+          ]);
           # TeX Live for the handbook PDF (approach from
           # kartoza/qgis-desktop-docker) — combine, not scheme-full, to keep
           # the closure ~500 MB.
@@ -231,7 +240,8 @@
             type = "app";
             program = toString (
               pkgs.writeShellScript "qgis-dev-${name}" ''
-                exec nix develop ${self} --command qgis-dev ${name} "$@"
+                exec nix --extra-experimental-features "nix-command flakes" \
+                  develop ${self} --command qgis-dev ${name} "$@"
               ''
             );
             meta.description = "qgis-dev ${name} (inside the overlay devshell)";
@@ -252,7 +262,13 @@
             type = "app";
             program = toString (
               pkgs.writeShellScript "qgis-dev-handbook" ''
-                exec nix develop ${self}#tooling --command mkdocs serve -a localhost:8001 "$@"
+                export PATH=${
+                  lib.makeBinPath [
+                    docsPython
+                    pkgs.git
+                  ]
+                }:$PATH
+                exec mkdocs serve -a localhost:8001 "$@"
               ''
             );
             meta.description = "Serve the developer handbook (run from the sidecar repo)";
@@ -261,7 +277,13 @@
             type = "app";
             program = toString (
               pkgs.writeShellScript "qgis-dev-handbook-build" ''
-                exec nix develop ${self}#tooling --command mkdocs build --strict "$@"
+                export PATH=${
+                  lib.makeBinPath [
+                    docsPython
+                    pkgs.git
+                  ]
+                }:$PATH
+                exec mkdocs build --strict "$@"
               ''
             );
             meta.description = "Build the handbook site into ./site (run from the sidecar repo)";
