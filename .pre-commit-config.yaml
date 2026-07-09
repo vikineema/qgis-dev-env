@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+# SPDX-License-Identifier: MIT
+#
+# Pre-commit suite for the sidecar repo itself (SRS FR-Q5). All tools come
+# from `nix develop .#tooling` — language: system keeps sourcing nix-first.
+fail_fast: false
+
+repos:
+  - repo: local
+    hooks:
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck
+        language: system
+        types: [shell]
+
+      - id: nixfmt
+        name: nixfmt
+        entry: nixfmt --check
+        language: system
+        files: '\.nix$'
+
+      - id: statix
+        name: statix
+        entry: statix check
+        language: system
+        pass_filenames: false
+
+      - id: stylua
+        name: stylua
+        entry: stylua --check
+        language: system
+        files: '\.lua$'
+
+      - id: gitleaks
+        name: gitleaks (secret scan)
+        entry: gitleaks protect --staged --no-banner
+        language: system
+        pass_filenames: false
+
+      - id: reuse
+        name: reuse lint (SPDX)
+        entry: reuse lint
+        language: system
+        pass_filenames: false
+
+      - id: bats
+        name: unit tests (bats)
+        entry: bats tests
+        language: system
+        pass_filenames: false

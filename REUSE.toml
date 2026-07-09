@@ -1,0 +1,14 @@
+version = 1
+SPDX-PackageName = "qgis-dev-env"
+SPDX-PackageSupplier = "Kartoza (Pty) Ltd <tim@kartoza.com>"
+SPDX-PackageDownloadLocation = "https://github.com/kartoza/qgis-dev-env"
+
+[[annotations]]
+path = [
+    "flake.lock",
+    ".gitignore",
+    "overlay/pyrightconfig.json",
+    "LICENSES/**",
+]
+SPDX-FileCopyrightText = "2026 Kartoza (Pty) Ltd <tim@kartoza.com>"
+SPDX-License-Identifier = "MIT"

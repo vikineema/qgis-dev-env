@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+# SPDX-License-Identifier: MIT
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    name: Lint, test and evaluate flake
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@v16
+
+      - name: Shellcheck
+        run: nix run nixpkgs#shellcheck -- bootstrap.sh lib/tasks.sh overlay/hooks/pre-push
+
+      - name: Unit tests (bats)
+        run: nix run nixpkgs#bats -- tests
+
+      - name: Secret scan (gitleaks)
+        run: nix run nixpkgs#gitleaks -- detect --source . --no-banner
+
+      - name: REUSE / SPDX compliance
+        run: nix run nixpkgs#reuse -- lint
+
+      - name: Flake evaluation
+        run: nix flake check --no-build
