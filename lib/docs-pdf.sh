@@ -66,6 +66,9 @@ PAGES=(
 # shellcheck disable=SC2016  # literal backticks in a sed replacement below
 transform() {
   gawk -v spec="$SPEC_FILE" '
+    NR == 1 && /^---$/ { infm = 1; next }
+    infm && /^---$/ { infm = 0; next }
+    infm { next }
     /^--8<-- "SPECIFICATION\.md"$/ {
       while ((getline line < spec) > 0) print line
       close(spec); next
@@ -90,6 +93,9 @@ transform() {
   ' "$1" |
     sed \
       -e '/^<div/d' -e '/^<\/div>/d' \
+      -e '/^<span class="kz-eyebrow">/d' \
+      -e 's/:\(material\|simple\|octicons\|fontawesome\)[a-z0-9_-]*: \?//g' \
+      -e 's/{ \.kz-cta__[a-z]* }//g' -e 's/{ \.kz-figure }//g' \
       -e 's/++\([a-zA-Z-]*\)++/`\1`/g' \
       -e 's/💗/love/g' \
       -e 's/🚀 \?//g' -e 's/⌨ \?//g' -e 's/🔒 \?//g' -e 's/📐 \?//g' \

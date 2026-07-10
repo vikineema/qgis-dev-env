@@ -1,19 +1,39 @@
-<!--
-SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
-SPDX-License-Identifier: MIT
--->
+---
+hide:
+  - navigation
+  - toc
+---
+<!-- SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com> -->
+<!-- SPDX-License-Identifier: MIT -->
 
-# QGIS Dev Env
+<div class="kz-hero" markdown>
 
-**A complete, reproducible, beautifully isolated developer environment for
-hacking on [QGIS](https://qgis.org) core — on NixOS, in Neovim.**
+<span class="kz-eyebrow">KARTOZA · QGIS DEV ENV</span>
 
-You get fast incremental builds (ccache + mold + Ninja, timed and logged),
-a `<leader>p` project menu for every routine task, full LSP coverage for
+# Hack on QGIS core, beautifully isolated
+
+Fast incremental builds, a fully wired Neovim, and a checkout that stays
+byte-pristine to upstream — reproducible on any NixOS machine.
+
+<div class="kz-cta" markdown>
+[:material-rocket-launch: Get Started](getting-started/index.md){ .kz-cta__primary }
+[:material-keyboard: Reference](reference/index.md){ .kz-cta__secondary }
+[:material-shield-lock: AI Policy](about/ai-policy.md){ .kz-cta__secondary }
+[:simple-github: GitHub](https://github.com/timlinux/qgis-dev-env){ .kz-cta__secondary }
+</div>
+
+</div>
+
+## What it is
+
+**A complete, reproducible developer environment for
+[QGIS](https://qgis.org) core — on NixOS, in Neovim.** You get ccache +
+mold + Ninja incremental builds (timed and logged, all cores), a
+`<leader>p` project menu for every routine task, full LSP coverage for
 C++20/Qt6, Python/PyQGIS, CMake, Nix and Bash, git-worktree workflows, a
 QA harness (sanitizers, valgrind, heaptrack, perf) and a fully configured
 editor ([nix-vim](https://github.com/timlinux/nix-vim)) — while the QGIS
-checkout itself stays **byte-pristine to upstream git** at all times.
+checkout itself stays **invisible to upstream git** at all times.
 
 ```mermaid
 graph LR
@@ -24,6 +44,8 @@ graph LR
     E --> F[Pre-commit checks]
     F --> G[Your first patch]
 ```
+
+## Where to go
 
 <div class="grid cards" markdown>
 
@@ -36,7 +58,7 @@ graph LR
 
     The [Reference](reference/index.md) section holds the complete
     `qgis-dev` command set, the Neovim keymap, build profiles, worktree
-    and QA guides.
+    and QA guides — plus the [troubleshooting field notes](reference/troubleshooting.md).
 
 - **🔒 The golden rule**
 
