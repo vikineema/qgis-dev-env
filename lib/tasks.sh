@@ -233,6 +233,18 @@ EOF
   fi
 }
 
+cmd_relink() {
+  # Force every target to relink (e.g. after a linker/toolchain change)
+  # WITHOUT losing compiled objects. A bare `rm -rf build/output` is a trap:
+  # configure-time files (qgisbuildpath.txt) live there too, so we must
+  # reconfigure after clearing it.
+  [[ -f "$BUILD/build.ninja" ]] || die "not configured yet — nothing to relink"
+  note "clearing linked artifacts ($BUILD/output) — compiled objects are kept"
+  rm -rf "$BUILD/output"
+  cmd_configure
+  note "now run 'qgis-dev build' — it will relink from cached objects"
+}
+
 # --------------------------------------------------------------- run / test
 cmd_run() {
   local bin="$BUILD/output/bin/qgis"
@@ -583,6 +595,7 @@ qgis-dev — QGIS developer tasks (shared by `nix run .#<task>` and Neovim)
   configure [-DVAR=VAL…]     cmake-configure build/ with the active profile
   build [-jN] [target…]      ninja build (all cores by default; timed + logged)
   clean                      ninja clean
+  relink                     clear linked outputs + reconfigure (objects kept)
   run [args…]                launch built QGIS with an isolated profile
   test [ctest args…]         run ctest (offscreen)
   test-file <path>           run the test matching a source file
@@ -622,6 +635,10 @@ clean)
   init
   note "cleaning $BUILD"
   ninja -C "$BUILD" clean
+  ;;
+relink)
+  init
+  cmd_relink
   ;;
 run)
   init
