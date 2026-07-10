@@ -261,6 +261,12 @@ cmd_run() {
   local bin="$BUILD/output/bin/qgis"
   [[ -x "$bin" ]] || die "no built binary at $bin — run 'qgis-dev build' first"
   ensure_build_marker
+  # The qgis.PyQt shim is staged at configure time under build/output —
+  # if it is gone, PyQGIS dies with "No module named 'qgis.PyQt'".
+  if [[ ! -f "$BUILD/output/python/qgis/PyQt/__init__.py" ]]; then
+    note "python staging incomplete (qgis.PyQt missing) — reconfiguring to restore it"
+    cmd_configure
+  fi
   mkdir -p "$STATE/profiles"
   note "launching $bin (isolated profile under .dev-env/profiles — your real QGIS profile is safe)"
   # No QGIS_PREFIX_PATH: the qgisbuildpath.txt marker drives path discovery;
@@ -579,6 +585,11 @@ cmd_doctor() {
   if [[ -d "$SIDECAR" ]]; then ok "sidecar: $SIDECAR"; else bad "sidecar directory missing"; fi
   if [[ -L "$ROOT/.envrc" ]]; then ok ".envrc symlink in place"; else bad ".envrc missing or not a symlink (re-run bootstrap.sh)"; fi
   if [[ -f "$BUILD/compile_commands.json" ]]; then ok "compile_commands.json present"; else bad "no compile_commands.json (run 'qgis-dev configure')"; fi
+  if [[ ! -d "$BUILD/output" ]] || [[ -f "$BUILD/output/python/qgis/PyQt/__init__.py" ]]; then
+    ok "python staging (qgis.PyQt) intact"
+  else
+    bad "qgis.PyQt staging missing — run 'qgis-dev configure' (PyQGIS would be disabled)"
+  fi
   local common
   common="$(cd "$ROOT" && readlink -f "$(git rev-parse --git-common-dir)")"
   if grep -q 'qgis-dev-env' "$common/info/exclude" 2>/dev/null; then ok "git exclude block registered"; else bad "exclude block missing (re-run bootstrap.sh)"; fi
