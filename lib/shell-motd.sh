@@ -38,7 +38,10 @@ _qde_motd() {
         unit = "GB"
         if ($1 ~ /GiB/) unit = "GiB"
         gsub(/ +/, " ", $2)
-        size = $2 " " unit
+        # $2 is like "5.8 / 50.0 (11.55%)" — put the unit after the numbers
+        n = split($2, p, " ")
+        if (n >= 3) size = p[1] "/" p[3] " " unit ((n >= 4) ? " " p[4] : "")
+        else size = $2 " " unit
       }
       END {
         if (size ~ /^0\.0 /) { printf "empty - first build will fill it"; exit }
