@@ -233,6 +233,17 @@ EOF
   fi
 }
 
+ensure_build_marker() {
+  # qgisbuildpath.txt tells QGIS binaries they run from a build tree (PyQGIS
+  # and resources then resolve against the build output, not the install
+  # prefix). CMake writes it at configure time only; restore it if lost.
+  local marker="$BUILD/output/bin/qgisbuildpath.txt"
+  if [[ -d "$BUILD/output/bin" && ! -f "$marker" ]]; then
+    printf '%s\n%s\n' "$ROOT" "$BUILD/output" >"$marker"
+    note "restored qgisbuildpath.txt (running-from-build-tree marker)"
+  fi
+}
+
 cmd_relink() {
   # Force every target to relink (e.g. after a linker/toolchain change)
   # WITHOUT losing compiled objects. A bare `rm -rf build/output` is a trap:
@@ -249,9 +260,12 @@ cmd_relink() {
 cmd_run() {
   local bin="$BUILD/output/bin/qgis"
   [[ -x "$bin" ]] || die "no built binary at $bin — run 'qgis-dev build' first"
+  ensure_build_marker
   mkdir -p "$STATE/profiles"
   note "launching $bin (isolated profile under .dev-env/profiles — your real QGIS profile is safe)"
-  QGIS_PREFIX_PATH="$BUILD/output" "$bin" --profiles-path "$STATE/profiles" "$@"
+  # No QGIS_PREFIX_PATH: the qgisbuildpath.txt marker drives path discovery;
+  # a prefix env var selects install-layout paths and breaks PyQGIS.
+  "$bin" --profiles-path "$STATE" "$@"
 }
 
 cmd_test() {
@@ -459,9 +473,9 @@ cmd_qa() {
     note "valgrind memcheck → $d/valgrind.log"
     note "(slow — for most memory bugs 'qgis-dev qa asan' is the better first tool)"
     mkdir -p "$STATE/profiles"
-    QGIS_PREFIX_PATH="$BUILD/output" valgrind --leak-check=full --num-callers=25 \
+    valgrind --leak-check=full --num-callers=25 \
       "${supp[@]}" --log-file="$d/valgrind.log" \
-      "$exe" --profiles-path "$STATE/profiles" "$@" || true
+      "$exe" --profiles-path "$STATE" "$@" || true
     memcheck_to_locations "$d/valgrind.log"
     note "full log: $d/valgrind.log"
     ;;
@@ -479,7 +493,7 @@ cmd_qa() {
     mkdir -p "$STATE/profiles"
     ASAN_OPTIONS="log_path=$d/asan:halt_on_error=0:detect_leaks=1" \
       UBSAN_OPTIONS="log_path=$d/ubsan:print_stacktrace=1" \
-      QGIS_PREFIX_PATH="$BUILD/output" "$exe" --profiles-path "$STATE/profiles" "$@" || true
+      "$exe" --profiles-path "$STATE" "$@" || true
     cat "$d"/asan.* "$d"/ubsan.* 2>/dev/null || note "no sanitizer reports — clean run"
     note "reports (if any) in $d; switch back with 'qgis-dev profile debug'"
     ;;
@@ -490,8 +504,8 @@ cmd_qa() {
     d="$(diag_dir heaptrack)"
     mkdir -p "$STATE/profiles"
     note "heaptrack → $d"
-    QGIS_PREFIX_PATH="$BUILD/output" heaptrack -o "$d/heaptrack" \
-      "$exe" --profiles-path "$STATE/profiles" || true
+    heaptrack -o "$d/heaptrack" \
+      "$exe" --profiles-path "$STATE" || true
     if command -v heaptrack_gui >/dev/null; then heaptrack_gui "$d"/heaptrack.* & fi
     ;;
   perf)
@@ -501,8 +515,8 @@ cmd_qa() {
     d="$(diag_dir perf)"
     mkdir -p "$STATE/profiles"
     note "perf record (dwarf call graphs) → $d/perf.data"
-    QGIS_PREFIX_PATH="$BUILD/output" perf record -g --call-graph dwarf -o "$d/perf.data" -- \
-      "$exe" --profiles-path "$STATE/profiles" || true
+    perf record -g --call-graph dwarf -o "$d/perf.data" -- \
+      "$exe" --profiles-path "$STATE" || true
     if command -v hotspot >/dev/null; then
       hotspot "$d/perf.data" &
     else
@@ -515,9 +529,9 @@ cmd_qa() {
     exe="$(qa_exe "${1:-}")"
     d="$(diag_dir callgrind)"
     mkdir -p "$STATE/profiles"
-    QGIS_PREFIX_PATH="$BUILD/output" valgrind --tool=callgrind \
+    valgrind --tool=callgrind \
       --callgrind-out-file="$d/callgrind.out" \
-      "$exe" --profiles-path "$STATE/profiles" || true
+      "$exe" --profiles-path "$STATE" || true
     if command -v kcachegrind >/dev/null; then kcachegrind "$d/callgrind.out" & fi
     note "callgrind data: $d/callgrind.out"
     ;;
