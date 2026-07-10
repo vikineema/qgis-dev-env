@@ -167,6 +167,9 @@
               # pin QT_QPA_PLATFORM_PLUGIN_PATH — it restricts the platform
               # search to one directory and breaks wayland sessions.
               export QT_PLUGIN_PATH="${qt.qtbase}/${qt.qtbase.qtPluginPrefix}:${qt.qtwayland}/${qt.qtbase.qtPluginPrefix}:${qt.qtsvg}/${qt.qtbase.qtPluginPrefix}:${qt.qtimageformats}/${qt.qtbase.qtPluginPrefix}''${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
+              # QML modules (QtQuick.Controls etc. — the app's QML UI parts)
+              export QML_IMPORT_PATH="${qt.qtdeclarative}/${qt.qtbase.qtQmlPrefix}''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
+              export QML2_IMPORT_PATH="$QML_IMPORT_PATH"
               # Store paths are resolved here, at shell time — never committed
               # into dotfiles (SRS C6). Consumed by `qgis-dev configure`.
               export QGIS_DEV_QT_PLUGINS_DIR="${qt.qtbase}/${qt.qtbase.qtPluginPrefix}"
