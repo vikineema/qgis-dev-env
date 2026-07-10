@@ -13,8 +13,8 @@ CMAKE_ARGS+=(
   -DWITH_QTWEBENGINE=OFF
   -DENABLE_TESTS=ON
   -DCMAKE_LINKER_TYPE=MOLD
-  -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g"
-  -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g"
+  -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g -UGDAL_DEBUG"
+  -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g -UGDAL_DEBUG"
   -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
   -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined"
 )

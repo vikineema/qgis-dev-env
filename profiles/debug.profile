@@ -11,8 +11,10 @@ CMAKE_ARGS+=(
   -DWITH_QTWEBENGINE=ON
   -DENABLE_TESTS=ON
   -DCMAKE_LINKER_TYPE=MOLD
-  -DCMAKE_CXX_FLAGS_DEBUG="-g -gsplit-dwarf"
-  -DCMAKE_C_FLAGS_DEBUG="-g -gsplit-dwarf"
+  # -UGDAL_DEBUG: nixpkgs GDAL propagates $<$<CONFIG:DEBUG>:GDAL_DEBUG>, whose
+  # strict handle types break PDAL 2.8.4 Geometry.hpp (pdal_wrench).
+  -DCMAKE_CXX_FLAGS_DEBUG="-g -gsplit-dwarf -UGDAL_DEBUG"
+  -DCMAKE_C_FLAGS_DEBUG="-g -gsplit-dwarf -UGDAL_DEBUG"
   -DCMAKE_EXE_LINKER_FLAGS=-Wl,--gdb-index
   -DCMAKE_SHARED_LINKER_FLAGS=-Wl,--gdb-index
 )
