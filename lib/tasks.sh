@@ -233,6 +233,121 @@ EOF
   fi
 }
 
+fmt_hms() { # seconds -> "1h2m3s" / "2m3s" / "45s"
+  local s="${1:-0}" h m
+  s=${s%.*}
+  h=$((s / 3600))
+  m=$(((s % 3600) / 60))
+  s=$((s % 60))
+  if [[ "$h" -gt 0 ]]; then printf '%dh%dm%ds' "$h" "$m" "$s"; elif [[ "$m" -gt 0 ]]; then printf '%dm%ds' "$m" "$s"; else printf '%ds' "$s"; fi
+}
+
+cmd_report() {
+  [[ -s "$BUILD_LOG" ]] || die "no builds logged yet — run 'qgis-dev build' first"
+  command -v gnuplot >/dev/null || die "gnuplot not available (enter the devshell)"
+
+  local fmt=pdf open=0 a
+  for a in "$@"; do
+    case "$a" in
+    --pdf) fmt=pdf ;;
+    --svg) fmt=svg ;;
+    --png) fmt=png ;;
+    --open) open=1 ;;
+    *) die "usage: qgis-dev report [--pdf|--svg|--png] [--open]" ;;
+    esac
+  done
+
+  local work clean prof
+  work="$(mktemp -d)"
+  clean="$work/clean.tsv"
+  prof="$work/prof.tsv"
+
+  # One awk pass: emit per-build numeric rows (clean.tsv), accumulate per-profile
+  # averages (prof.tsv), and print scalar summary as KEY=VALUE lines.
+  local vars
+  vars="$(awk -F'\t' -v clean="$clean" -v prof="$prof" '
+    NR == 1 { next }
+    {
+      idx++
+      dur = $8 + 0
+      ok = ($10 == "ok") ? 1 : 0
+      hit = ($9 == "-" || $9 == "") ? "-" : $9
+      printf "%d\t%d\t%s\t%d\n", idx, dur, hit, ok > clean
+      sum += dur; durs[idx] = dur
+      if (min == "" || dur < min) min = dur
+      if (dur > max) max = dur
+      if (ok) okc++; else failc++
+      if ($9 != "-" && $9 != "") { hsum += $9; hn++ }
+      hits += ($11 == "-" ? 0 : $11); miss += ($12 == "-" ? 0 : $12)
+      pd[$5] += dur; pc[$5]++
+      last = dur
+    }
+    END {
+      if (idx == 0) { print "EMPTY=1"; exit }
+      # per-profile file (index, avg, count, name)
+      pi = 0
+      for (p in pd) { pi++; printf "%d\t%.0f\t%d\t%s\n", pi, pd[p]/pc[p], pc[p], p > prof }
+      # median
+      n = asorti_simple(durs, sorted)
+      if (n % 2) med = durs_sorted[(n+1)/2]; else med = (durs_sorted[n/2] + durs_sorted[n/2+1]) / 2
+      printf "RPT_TOTAL=%d\n", idx
+      printf "RPT_SUM=%d\n", sum
+      printf "RPT_AVG=%d\n", sum/idx
+      printf "RPT_MIN=%d\n", min
+      printf "RPT_MAX=%d\n", max
+      printf "RPT_MED=%d\n", med
+      printf "RPT_OK=%d\n", okc
+      printf "RPT_FAIL=%d\n", failc
+      printf "RPT_HIT=%.1f\n", (hn ? hsum/hn : 0)
+      printf "RPT_HITS=%d\n", hits
+      printf "RPT_MISS=%d\n", miss
+      printf "RPT_LAST=%d\n", last
+      # log-scale the duration panel when a cold build dwarfs incrementals
+      printf "RPT_YLOG=%d\n", (med > 0 && max > 15 * med) ? 1 : 0
+    }
+    # mawk-safe numeric sort of values in a[] -> global durs_sorted[1..n]
+    function asorti_simple(arr, _tmp,   i, j, k, n, v) {
+      n = 0
+      for (i in arr) { n++; vals[n] = arr[i] }
+      for (i = 2; i <= n; i++) { v = vals[i]; j = i - 1
+        while (j >= 1 && vals[j] > v) { vals[j+1] = vals[j]; j-- }
+        vals[j+1] = v }
+      for (k = 1; k <= n; k++) durs_sorted[k] = vals[k]
+      return n
+    }
+  ' "$BUILD_LOG")"
+  eval "$vars"
+  [[ "${EMPTY:-0}" == 1 ]] && die "no completed builds to report on"
+
+  local cache="unknown"
+  if command -v ccache >/dev/null; then
+    cache="$(ccache -s 2>/dev/null | awk -F': *' '/Cache size/ {gsub(/ +/," ",$2); print $2; exit}')"
+    [[ -n "$cache" ]] || cache="empty"
+  fi
+
+  local ext="$fmt" out
+  out="$STATE_HOME/build-report.$ext"
+  local host gendate
+  host="$(hostname)"
+  gendate="$(date '+%Y-%m-%d %H:%M')"
+
+  gnuplot \
+    -e "infile='$clean'" -e "proffile='$prof'" -e "outfile='$out'" -e "term='$fmt'" \
+    -e "host='$host'" -e "gendate='$gendate'" \
+    -e "rtotal=$RPT_TOTAL" -e "ravg='$(fmt_hms "$RPT_AVG")'" -e "rmed='$(fmt_hms "$RPT_MED")'" \
+    -e "rmin='$(fmt_hms "$RPT_MIN")'" -e "rmax='$(fmt_hms "$RPT_MAX")'" -e "rlast='$(fmt_hms "$RPT_LAST")'" \
+    -e "rhit=$RPT_HIT" -e "rhits=$RPT_HITS" -e "rmisses=$RPT_MISS" \
+    -e "rok=$RPT_OK" -e "rfail=$RPT_FAIL" -e "rcache='$cache'" -e "ylog=$RPT_YLOG" \
+    "${QGIS_DEV_REPORT_GNUPLOT:-$SIDECAR/lib/report.gnuplot}"
+
+  rm -rf "$work"
+  note "build report written: $out"
+  note "$RPT_TOTAL builds · avg $(fmt_hms "$RPT_AVG") · median $(fmt_hms "$RPT_MED") · ccache ${RPT_HIT}%"
+  if [[ "$open" -eq 1 ]]; then
+    (xdg-open "$out" >/dev/null 2>&1 &) || note "could not open $out"
+  fi
+}
+
 ensure_build_marker() {
   # qgisbuildpath.txt tells QGIS binaries they run from a build tree (PyQGIS
   # and resources then resolve against the build output, not the install
@@ -633,6 +748,7 @@ qgis-dev — QGIS developer tasks (shared by `nix run .#<task>` and Neovim)
   worktree <add|list|status|remove|prune>
   qa <memcheck|asan|heaptrack|perf|callgrind|cppcheck|gammaray|list>
   stats [N|--graph]          build-time history (table + trend; svg with --graph)
+  report [--pdf|--svg|--png] [--open]   branded build-performance infographic
   perf [on|off|build-toggle|status]   CPU performance mode control
   ccache-stats | ccache-zero
   doctor                     health + isolation check (all worktrees)
@@ -644,6 +760,11 @@ shift || true
 case "$cmd" in
 help | --help | -h) usage ;;
 stats) cmd_stats "$@" ;;
+report)
+  # reads the machine-global build log; no checkout needed (like stats). The
+  # gnuplot template comes from QGIS_DEV_REPORT_GNUPLOT (store path) when set.
+  cmd_report "$@"
+  ;;
 perf)
   # deliberately no init — perf mode is host-level and works outside a checkout
   cmd_perf "$@"

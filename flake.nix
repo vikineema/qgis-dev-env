@@ -48,6 +48,7 @@
         "worktree"
         "qa"
         "stats"
+        "report"
         "perf"
         "ccache-stats"
         "ccache-zero"
@@ -177,6 +178,9 @@
               export QGIS_DEV_QSCI_DIST_INFO="${py.qscintilla-qt6}/${pkgs.python3.sitePackages}/pyqt6_qscintilla-${py.qscintilla-qt6.version}.dist-info"
               export QGIS_DEV_PYQT6_DIST_INFO="${py.pyqt6}/${pkgs.python3.sitePackages}/pyqt6-${py.pyqt6.version}.dist-info"
               export QGIS_DEV_PYTHON="${devPython}/bin/python3"
+              # Report infographic template as a store path, so `qgis-dev
+              # report` works from a plain `nix develop`/`nix run` too.
+              export QGIS_DEV_REPORT_GNUPLOT="${./lib/report.gnuplot}"
               # Point pyright's committed pythonPath at today's interpreter.
               if [ -f CMakeLists.txt ] && [ -d src/core ]; then
                 mkdir -p .dev-env
