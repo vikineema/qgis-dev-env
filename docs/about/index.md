@@ -10,6 +10,8 @@ for working on QGIS core with NixOS, Nix flakes and Neovim — built around
 one hard constraint: **nothing from this environment may ever reach
 upstream QGIS**, where AI contributions are not accepted.
 
+- [FAQ](faq.md) — common questions (why Neovim not Qt Creator, the first
+  download, incremental builds, and more).
 - [AI policy](ai-policy.md) — the rule, the boundary, and the
   acknowledgement every contributor makes.
 - [Specification](specification.md) — the complete SRS: requirements,

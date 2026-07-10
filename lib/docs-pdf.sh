@@ -59,6 +59,7 @@ PAGES=(
   "internals/activation.md"
   "internals/build-run.md"
   "about/index.md"
+  "about/faq.md"
   "about/ai-policy.md"
   "about/specification.md"
 )

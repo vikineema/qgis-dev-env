@@ -179,5 +179,6 @@ nav:
     - Build, run &amp; profiles: internals/build-run.md
   - About:
     - about/index.md
+    - FAQ: about/faq.md
     - AI policy: about/ai-policy.md
     - Specification: about/specification.md
