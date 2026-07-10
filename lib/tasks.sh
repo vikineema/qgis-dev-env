@@ -126,11 +126,18 @@ cmd_configure() {
   cmake -S "$ROOT" -B "$BUILD" "${CMAKE_ARGS[@]}" "$@"
 }
 
-log_build() { # ts branch profile targets jobs duration hitpct result
+log_build() { # ts host worktree branch profile targets jobs duration hitpct result hits misses
   if [[ ! -s "$BUILD_LOG" ]]; then
-    printf 'timestamp\thost\tworktree\tbranch\tprofile\ttargets\tjobs\tduration_s\tccache_hit_pct\tresult\n' >"$BUILD_LOG"
+    printf 'timestamp\thost\tworktree\tbranch\tprofile\ttargets\tjobs\tduration_s\tccache_hit_pct\tresult\tccache_hits\tccache_misses\n' >"$BUILD_LOG"
+  elif ! head -1 "$BUILD_LOG" | grep -q 'ccache_hits'; then
+    # migrate pre-hits/misses logs: extend header, pad old rows
+    local tmp
+    tmp="$(mktemp)"
+    awk 'NR == 1 { print $0 "\tccache_hits\tccache_misses"; next }
+         { print $0 "\t-\t-" }' "$BUILD_LOG" >"$tmp"
+    mv "$tmp" "$BUILD_LOG"
   fi
-  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$@" >>"$BUILD_LOG"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$@" >>"$BUILD_LOG"
 }
 
 cmd_build() {
@@ -179,8 +186,8 @@ cmd_build() {
   [[ "$rc" -eq 0 ]] || result=fail
   branch="$(git -C "$ROOT" branch --show-current 2>/dev/null || echo -)"
   log_build "$(date -Is)" "$(hostname)" "$ROOT" "$branch" "$prof" \
-    "${targets[*]:-all}" "$jobs" "$dur" "$pct" "$result"
-  note "build $result: ${dur}s, ccache hit rate ${pct}% (log: $BUILD_LOG)"
+    "${targets[*]:-all}" "$jobs" "$dur" "$pct" "$result" "$dh" "$dm"
+  note "build $result: ${dur}s, ccache ${pct}% (${dh} hits / ${dm} misses) — log: $BUILD_LOG"
   trap - EXIT
   restore_power
   return "$rc"
@@ -196,7 +203,7 @@ cmd_stats() {
   {
     head -1 "$BUILD_LOG"
     tail -n "+2" "$BUILD_LOG" | tail -n "$n"
-  } | cut -f1,4,5,6,7,8,9,10 | column -t -s"$(printf '\t')"
+  } | cut -f1,4,5,6,7,8,9,10,11,12 | column -t -s"$(printf '\t')"
   echo
   tail -n "+2" "$BUILD_LOG" | tail -n "$n" | awk -F'\t' '
     { d[NR]=$8; sum+=$8; if (min==""||$8<min) min=$8; if ($8>max) max=$8 }
