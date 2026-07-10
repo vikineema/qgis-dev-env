@@ -64,6 +64,7 @@ Neovim menu. Run from anywhere inside a QGIS checkout or worktree.
 | Command | Does |
 |---|---|
 | `qgis-dev stats [N\|--graph]` | Build-time history — table, sparkline, SVG graph |
+| `qgis-dev report [--pdf\|--svg\|--png] [--open]` | Branded multi-panel build-performance infographic (see [Build profiles & flags](profiles.md#analysing-your-build-history)) |
 | `qgis-dev perf on\|off\|build-toggle\|status` | CPU performance power-profile control |
 | `qgis-dev ccache-stats` / `ccache-zero` | Cache statistics / reset counters |
 | `qgis-dev doctor` | Toolchain + isolation health across all worktrees |

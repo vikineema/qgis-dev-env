@@ -52,6 +52,41 @@ The hit rate and the raw hit/miss counts are **per build** (counter deltas
 around each ninja run), not lifetime averages — so builds of different
 sizes compare honestly.
 
-`qgis-dev stats` (or `<leader>pG`) summarises; `qgis-dev stats --graph`
-renders `build-times.svg` for the long view. Compare profiles, branches
-and machines with real numbers instead of vibes.
+## Analysing your build history
+
+Three views, increasing in polish, all reading the same log:
+
+| Command | Output |
+|---|---|
+| `qgis-dev stats [N]` (`<leader>pG`) | Terminal table of the last N builds + a unicode sparkline + avg/min/max — the quick glance |
+| `qgis-dev stats --graph` | `build-times.svg`, a single duration line chart |
+| `qgis-dev report [--pdf\|--svg\|--png] [--open]` (`<leader>pR`) | A **branded multi-panel infographic** (below) |
+
+![Sample build-performance infographic](../assets/build-report-sample.svg){ .no-lightbox }
+
+`qgis-dev report` renders a Kartoza-styled dashboard to
+`$XDG_STATE_HOME/qgis-dev-env/build-report.<ext>` (PDF by default;
+`--open` launches your viewer). It has four zones:
+
+- **Duration over time** — every build as a line + point; failed builds
+  marked in red; an amber bezier trend line. The y-axis auto-switches to
+  **log scale** when a cold build would otherwise flatten the
+  incrementals, so seconds-scale rebuilds stay legible next to a
+  multi-hour first build.
+- **ccache hit rate** — the percentage per build, filled area.
+- **Average duration by profile** — bars for debug / minimal / release /
+  asan-ubsan, annotated with build counts, so you can see what each
+  profile actually costs you.
+- **Summary band** — average, median, fastest, slowest and last build
+  times; total builds with ok/fail split; overall ccache hit rate, cache
+  size, and cumulative hits/misses.
+
+The same command is `nix run .#report` from any terminal. Because the log
+is machine-global (`$XDG_STATE_HOME/qgis-dev-env/build-log.tsv`), the
+report spans every checkout and worktree on the machine — compare
+profiles, branches and hardware with real numbers instead of vibes.
+
+!!! tip "Roll your own"
+    The log is plain TSV with a header row (see the schema above) — load
+    it into `datamash`, a notebook, or a spreadsheet for any analysis the
+    built-in report doesn't cover.

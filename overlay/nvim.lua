@@ -247,6 +247,10 @@ map('<leader>pG', function()
   task({ 'stats' }, { show = 'buffer', title = 'build-time trends' })
 end, 'Build-time trends')
 
+map('<leader>pR', function()
+  detached({ 'report', '--pdf', '--open' }, 'Build-performance infographic (PDF) — opening…')
+end, 'Build report (PDF infographic)')
+
 map('<leader>pv', function()
   task({ 'doctor' }, { show = 'buffer', title = 'doctor' })
 end, 'Doctor (health check)')
