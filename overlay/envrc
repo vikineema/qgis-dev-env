@@ -17,6 +17,12 @@ export QGIS_DEV_SIDECAR="$_qde_sidecar"
 export CCACHE_CONFIGPATH="$_qde_sidecar/overlay/ccache.conf"
 export CCACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/qgis-ccache"
 
+# Qt, uic and lualatex need a UTF-8 locale; interactive sessions often lack
+# one. Done here (not the shellHook) so it applies in the user's context.
+if [ -z "${LANG:-}" ] || [ "${LANG:-}" = "C" ]; then
+  export LANG=C.UTF-8
+fi
+
 watch_file "$_qde_sidecar/flake.nix"
 watch_file "$_qde_sidecar/flake.lock"
 # tasks.sh is baked into the devshell's qgis-dev binary — reload when it

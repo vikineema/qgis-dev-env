@@ -161,13 +161,12 @@
             ++ sidecarTools;
 
             shellHook = ''
-              # Qt runtime plugin discovery (was upstream's devShell hook).
-              export QT_PLUGIN_PATH="${qt.qtbase}/${qt.qtbase.qtPluginPrefix}"
-              export QT_QPA_PLATFORM_PLUGIN_PATH="${qt.qtbase}/${qt.qtbase.qtPluginPrefix}/platforms"
-              # Qt and lualatex need a UTF-8 locale; direnv often has none.
-              if [ "''${LANG:-C}" = "C" ] || [ -z "''${LANG:-}" ]; then
-                export LANG=C.UTF-8
-              fi
+              # Qt runtime plugin discovery for build-tree binaries. Roots,
+              # not a single dir: the wayland platform plugin lives in
+              # qtwayland, SVG icon rendering in qtsvg/qtimageformats. Never
+              # pin QT_QPA_PLATFORM_PLUGIN_PATH — it restricts the platform
+              # search to one directory and breaks wayland sessions.
+              export QT_PLUGIN_PATH="${qt.qtbase}/${qt.qtbase.qtPluginPrefix}:${qt.qtwayland}/${qt.qtbase.qtPluginPrefix}:${qt.qtsvg}/${qt.qtbase.qtPluginPrefix}:${qt.qtimageformats}/${qt.qtbase.qtPluginPrefix}''${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
               # Store paths are resolved here, at shell time — never committed
               # into dotfiles (SRS C6). Consumed by `qgis-dev configure`.
               export QGIS_DEV_QT_PLUGINS_DIR="${qt.qtbase}/${qt.qtbase.qtPluginPrefix}"
