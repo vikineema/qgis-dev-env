@@ -94,6 +94,7 @@ transform() {
     sed \
       -e '/^<div/d' -e '/^<\/div>/d' \
       -e '/^<span class="kz-eyebrow">/d' \
+      -e '/!\[.*\](assets\/qgis-dev-env\.png)/d' \
       -e 's/:\(material\|simple\|octicons\|fontawesome\)[a-z0-9_-]*: \?//g' \
       -e 's/{ \.kz-cta__[a-z]* }//g' -e 's/{ \.kz-figure }//g' \
       -e 's/++\([a-zA-Z-]*\)++/`\1`/g' \
@@ -131,7 +132,7 @@ META
 
 cp "$PDF_DIR/preamble.tex" "$WORK/preamble.tex"
 cp "$PDF_DIR/cover.tex" "$WORK/cover.tex"
-cp "$DOCS_DIR/assets/brand/kartoza-logo-vertical-reversed.png" "$WORK/cover-logo.png"
+cp "$DOCS_DIR/assets/qgis-dev-env.png" "$WORK/cover-banner.png"
 
 mkdir -p "$WORK/texout"
 cd "$WORK"

@@ -5,6 +5,8 @@ SPDX-License-Identifier: MIT
 
 # qgis-dev-env
 
+![QGIS Dev Env — Kartoza](docs/assets/qgis-dev-env.png)
+
 A reproducible, shareable, fully **isolated** developer environment overlay
 for hacking on [QGIS](https://github.com/qgis/QGIS) core with **NixOS + Nix
 flakes + Neovim**. Fast incremental builds (ccache + mold + Ninja), a

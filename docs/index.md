@@ -24,6 +24,8 @@ byte-pristine to upstream — reproducible on any NixOS machine.
 
 </div>
 
+![QGIS Dev Env — Kartoza](assets/qgis-dev-env.png){ .kz-figure .no-lightbox }
+
 ## What it is
 
 **A complete, reproducible developer environment for
