@@ -8,6 +8,7 @@ path = [
     "flake.lock",
     ".gitignore",
     "overlay/pyrightconfig.json",
+    "overlay/luarc.json",
     "LICENSES/**",
 ]
 SPDX-FileCopyrightText = "2026 Kartoza (Pty) Ltd <tim@kartoza.com>"
