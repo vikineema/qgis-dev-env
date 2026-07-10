@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
 # SPDX-License-Identifier: MIT
-# shellcheck shell=bash disable=SC2148,SC2034
+# shellcheck shell=bash disable=SC2148,SC2034,SC2054
 #
 # debug — the default everyday profile (SRS FR-B3/B6): full feature set,
 # fast links (mold + split dwarf + gdb-index for quick debugger startup).

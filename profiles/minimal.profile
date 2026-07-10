@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
 # SPDX-License-Identifier: MIT
-# shellcheck shell=bash disable=SC2148,SC2034
+# shellcheck shell=bash disable=SC2148,SC2034,SC2054
 #
 # minimal — fastest possible iteration on core C++ (SRS FR-B6): 3D,
 # WebEngine, PDAL, tests and Python bindings all off. Not for PyQGIS work.

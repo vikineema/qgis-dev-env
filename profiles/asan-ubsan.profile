@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
 # SPDX-License-Identifier: MIT
-# shellcheck shell=bash disable=SC2148,SC2034
+# shellcheck shell=bash disable=SC2148,SC2034,SC2054
 #
 # asan-ubsan — AddressSanitizer + UndefinedBehaviorSanitizer (SRS FR-G3).
 # The default tool for memory bugs: ~2x slowdown vs valgrind's 20-50x.
