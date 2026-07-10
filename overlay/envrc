@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
 # SPDX-License-Identifier: MIT
-# shellcheck shell=bash disable=SC2148
+# shellcheck shell=bash disable=SC2148,SC1091
 #
 # Symlinked into the QGIS checkout as .envrc — activates the qgis-dev-env
 # overlay devshell via direnv/nix-direnv (SRS FR-N3). Resolves the sidecar
@@ -19,6 +19,9 @@ export CCACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/qgis-ccache"
 
 watch_file "$_qde_sidecar/flake.nix"
 watch_file "$_qde_sidecar/flake.lock"
+# tasks.sh is baked into the devshell's qgis-dev binary — reload when it
+# changes. (Profiles/suppressions/motd are read live and need no watch.)
+watch_file "$_qde_sidecar/lib/tasks.sh"
 use flake "path:$_qde_sidecar"
 
 # Activation banner on every direnv load. (The flake's shellHook also shows
