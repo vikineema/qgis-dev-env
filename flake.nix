@@ -90,7 +90,10 @@
 
           buildTools = [
             pkgs.ccache
-            pkgs.mold
+            # mold-wrapped, not mold: -fuse-ld=mold must resolve to the
+            # bintools-wrapped linker or NIX_LDFLAGS rpath injection is
+            # bypassed and built binaries can't find store libs at runtime.
+            pkgs.mold-wrapped
             pkgs.ninja
             pkgs.cmake
             pkgs.gdb
