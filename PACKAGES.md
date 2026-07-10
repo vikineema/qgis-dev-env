@@ -14,7 +14,7 @@ sourced from nixpkgs, pinned by `flake.lock` — no pip, no npm (SRS C3).
 | Package | Why |
 |---|---|
 | `ccache` | Object cache; makes rebuilds after branch switches warm (FR-B1/B2) |
-| `mold` | Fast linker; linking dominates warm rebuild time (FR-B3) |
+| `mold-wrapped` | Fast linker; linking dominates warm rebuild time (FR-B3). Wrapped variant is mandatory: bare mold bypasses nix's bintools wrapper and drops store RUNPATHs (FR-B15) |
 | `ninja`, `cmake` | Build system (upstream standard) |
 | `gnuplot` | Build-time trend graphs (`qgis-dev stats --graph`) |
 

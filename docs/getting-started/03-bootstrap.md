@@ -47,6 +47,26 @@ nix store. Subsequent entries are instant. From now on, simply `cd`-ing
 into the checkout gives you the complete environment; there is nothing to
 configure by hand.
 
+Every activation greets you with the Kartoza banner — live branch, active
+build profile, configured state, perf-boost toggle, ccache fill/hit-rate
+and your last logged build:
+
+```text
+────────────────────────────────────────────────────────────────
+  QGIS Dev Env  ·  Made with 💗 by Kartoza
+────────────────────────────────────────────────────────────────
+  branch     master
+  profile    debug   configured yes   boost off
+  ccache     12.3 / 50.0 GB   hits 4521 / 5820 (77.7%)
+  last build ok in 94s, 92% ccache (debug, 2026-07-10)
+  ...
+```
+
+Suppress it with `QGIS_DEV_QUIET=1`; it honours `NO_COLOR`. Whenever the
+sidecar itself changes you'll see one quick re-evaluation on entry, and if
+`.envrc` content changed direnv asks you to `direnv allow` again — that's
+the trust model working, not breakage.
+
 ## Trust the editor config
 
 Neovim (rightly) refuses to execute project-local config from strangers.

@@ -9,6 +9,36 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Kartoza-branded devshell activation banner (branch, profile, ccache
+  stats, last build) on every direnv load and `nix develop` (FR-N9);
+  devshell now composes on upstream's packages, not their devShell.
+- `qgis-dev relink`: safe force-relink keeping all compiled objects and
+  regenerating configure-time artifacts like `qgisbuildpath.txt`
+  (FR-B14).
+- Per-build ccache **hit/miss counts** in the build log alongside the
+  per-build hit rate; migration for existing logs (FR-B13).
+- `.luarc.json` overlay fencing lua-language-server away from the huge
+  QGIS tree (multi-minute editor startups otherwise).
+- Handbook **Troubleshooting** page recording all field learnings.
+
+### Fixed
+
+- Debug builds: `-UGDAL_DEBUG` in Debug-config profiles — nixpkgs GDAL
+  propagates `GDAL_DEBUG` to Debug consumers, breaking PDAL 2.8.4's
+  headers in the vendored pdal_wrench (FR-B15).
+- Linking through `mold-wrapped` instead of bare mold — unwrapped mold
+  bypasses nix's bintools wrapper, producing binaries without store
+  RUNPATHs that fail at build-time tool runs (FR-B15).
+- pkg-config in the devshell (silent cmake feature-probe degradation);
+  UTF-8 locale exported (Qt/uic warnings); Qt plugin-path exports
+  replicated from the dropped upstream hook.
+- Banner prints exactly once per activation; devshell reloads when
+  `lib/tasks.sh` changes (it is baked into the `qgis-dev` binary).
+
 ## [0.2.0] - 2026-07-09
 
 ### Added

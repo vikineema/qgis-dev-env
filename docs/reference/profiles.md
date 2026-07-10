@@ -42,8 +42,13 @@ profile resets to that profile's declared set.
 Every build appends to `~/.local/state/qgis-dev-env/build-log.tsv`:
 
 ```text
-timestamp  host  worktree  branch  profile  targets  jobs  duration_s  ccache_hit_pct  result
+timestamp  host  worktree  branch  profile  targets  jobs  duration_s
+ccache_hit_pct  result  ccache_hits  ccache_misses
 ```
+
+The hit rate and the raw hit/miss counts are **per build** (counter deltas
+around each ninja run), not lifetime averages — so builds of different
+sizes compare honestly.
 
 `qgis-dev stats` (or `<leader>pG`) summarises; `qgis-dev stats --graph`
 renders `build-times.svg` for the long view. Compare profiles, branches

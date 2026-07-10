@@ -50,6 +50,7 @@ PAGES=(
   "reference/profiles.md"
   "reference/worktrees.md"
   "reference/qa.md"
+  "reference/troubleshooting.md"
   "about/index.md"
   "about/ai-policy.md"
   "about/specification.md"

@@ -168,6 +168,7 @@ nav:
     - Build profiles &amp; flags: reference/profiles.md
     - Worktrees: reference/worktrees.md
     - QA &amp; diagnostics: reference/qa.md
+    - Troubleshooting: reference/troubleshooting.md
   - About:
     - about/index.md
     - AI policy: about/ai-policy.md

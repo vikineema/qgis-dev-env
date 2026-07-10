@@ -15,6 +15,7 @@ Neovim menu. Run from anywhere inside a QGIS checkout or worktree.
 | `qgis-dev configure [-DVAR=VAL…]` | CMake-configure `build/` with the active profile; extra `-D` flags persist in the cache |
 | `qgis-dev build [-jN] [target…]` | Ninja build — all cores by default; timed, ccache-namespaced, appended to the build log |
 | `qgis-dev clean` | `ninja clean` |
+| `qgis-dev relink` | Clear linked outputs + reconfigure, **keeping all compiled objects** — the safe way to force a full relink after a linker/toolchain change (never `rm -rf build/output` by hand: configure-time files live there) |
 | `qgis-dev targets` | List Ninja targets (feeds the editor picker) |
 | `qgis-dev flags` | List `WITH_*` / `ENABLE_*` / `BUILD_*` cache flags |
 | `qgis-dev profile [name\|list]` | Show / switch build profile (reconfigures) |
