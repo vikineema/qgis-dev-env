@@ -396,3 +396,60 @@ if vim.lsp.config and vim.lsp.enable then
     root_markers = { '.git' },
   })
 end
+
+-- ------------------------------------------------------------ DAP (C++/gdb)
+-- nix-vim ships the nvim-dap framework, the DAP UI and persistent
+-- breakpoints (Go/Delve by default). Here we register the gdb adapter and
+-- QGIS launch/attach configurations so `<leader>dc` (continue) can debug the
+-- build-tree binary. Guarded: plain Neovim without nvim-dap is unaffected.
+do
+  local ok_dap, dap = pcall(require, 'dap')
+  if ok_dap and vim.fn.executable('gdb') == 1 then
+    -- gdb >= 14 speaks DAP natively — no separate adapter package needed.
+    dap.adapters.gdb = {
+      type = 'executable',
+      command = 'gdb',
+      args = { '--interpreter=dap', '--eval-command', 'set print pretty on' },
+    }
+
+    -- Self-heal the build-tree marker / PyQGIS staging and return the binary.
+    local function qgis_program()
+      local res = vim.system({ 'qgis-dev', 'debugprep' }, { cwd = root(), text = true }):wait()
+      if res.code ~= 0 then
+        notify('debugprep: ' .. ((res.stderr or ''):gsub('%s+$', '')), vim.log.levels.ERROR)
+        return dap.ABORT
+      end
+      return vim.trim(res.stdout)
+    end
+
+    local qgis_cpp = {
+      {
+        name = 'Launch QGIS (build tree)',
+        type = 'gdb',
+        request = 'launch',
+        program = qgis_program,
+        args = function()
+          return { '--profiles-path', root() .. '/.dev-env/profiles' }
+        end,
+        cwd = function()
+          return root()
+        end,
+        stopAtBeginningOfMainSubprogram = false,
+      },
+      {
+        name = 'Attach to running QGIS',
+        type = 'gdb',
+        request = 'attach',
+        program = qgis_program,
+        processId = function()
+          return require('dap.utils').pick_process({ filter = 'qgis' })
+        end,
+        cwd = function()
+          return root()
+        end,
+      },
+    }
+    dap.configurations.cpp = qgis_cpp
+    dap.configurations.c = qgis_cpp
+  end
+end

@@ -1,0 +1,49 @@
+@startuml debug
+' SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+' SPDX-License-Identifier: MIT
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName sans
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #54A2CC
+  LifeLineBorderColor #8A8B8B
+  LifeLineBackgroundColor #F5F5F2
+  ParticipantBackgroundColor #F5F5F2
+  ParticipantBorderColor #54A2CC
+  ParticipantFontColor #383939
+  ActorBorderColor #383939
+}
+title Sequence — debugging QGIS with nvim-dap + gdb
+
+actor Developer as dev
+participant "Neovim\n(nvim-dap)" as nv
+participant "qgis-dev debugprep" as prep
+participant "gdb --interpreter=dap" as gdb
+participant "QGIS (debug build)" as qgis
+
+dev -> nv : <leader>db  set breakpoints\n(persistent across sessions)
+dev -> nv : <leader>dc  continue
+activate nv
+nv -> nv : pick "Launch QGIS (build tree)"
+nv -> prep : resolve program
+prep -> prep : heal marker + staging
+prep --> nv : build/output/bin/qgis
+nv -> gdb : launch adapter
+activate gdb
+gdb -> qgis : run (throwaway profile)
+activate qgis
+qgis -> gdb : stops at breakpoint
+gdb --> nv : stopped event (frame, scopes)
+nv -> dev : source line + DAP UI\n(vars, watches, call stack)
+loop step / inspect
+  dev -> nv : step over/into (F9/F10),\nhover, REPL, run-to-cursor
+  nv -> gdb : stepping requests
+  gdb --> nv : new frame + variables
+end
+dev -> nv : <leader>dq  terminate
+nv -> gdb : disconnect
+gdb -> qgis : kill
+deactivate qgis
+deactivate gdb
+deactivate nv
+@enduml

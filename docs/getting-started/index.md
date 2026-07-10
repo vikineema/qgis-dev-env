@@ -5,8 +5,8 @@ SPDX-License-Identifier: MIT
 
 # The Developer Journey
 
-Seven steps take you from nothing to an accepted upstream patch. Steps 1–4
-happen once per machine; steps 5–7 are your daily loop.
+Eight steps take you from nothing to an accepted upstream patch. Steps 1–4
+happen once per machine; steps 5–8 are your daily loop.
 
 | # | Step | What you end up with |
 |---|------|----------------------|
@@ -17,6 +17,7 @@ happen once per machine; steps 5–7 are your daily loop.
 | 5 | [Editing with Neovim](05-neovim.md) | nix-vim + the `<leader>p` menu + full LSP |
 | 6 | [Pre-commit & standards](06-precommit.md) | QGIS's own checks passing locally, findings in quickfix |
 | 7 | [Your first patch](07-first-patch.md) | A clean, human-authored PR to upstream |
+| 8 | [Debugging with DAP](08-debugging.md) | Step through QGIS core in Neovim — breakpoints, inspection, attach |
 
 ## Prerequisites
 

@@ -44,6 +44,7 @@ PAGES=(
   "getting-started/05-neovim.md"
   "getting-started/06-precommit.md"
   "getting-started/07-first-patch.md"
+  "getting-started/08-debugging.md"
   "reference/index.md"
   "reference/qgis-dev.md"
   "reference/keymap.md"

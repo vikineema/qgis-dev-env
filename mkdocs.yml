@@ -161,6 +161,7 @@ nav:
     - 5. Editing with Neovim: getting-started/05-neovim.md
     - 6. Pre-commit &amp; standards: getting-started/06-precommit.md
     - 7. Your first patch: getting-started/07-first-patch.md
+    - 8. Debugging with DAP: getting-started/08-debugging.md
   - Reference:
     - reference/index.md
     - qgis-dev commands: reference/qgis-dev.md

@@ -22,6 +22,18 @@ versioning: [SemVer](https://semver.org/).
   with **10 PlantUML diagrams** rendered to SVG (`nix run .#diagrams`)
   and embedded as vector PDF in the handbook.
 - Kartoza hero banner on the landing page, README and PDF cover.
+- **DAP debugging**: gdb (`--interpreter=dap`) adapter + "Launch QGIS" /
+  "Attach to running QGIS" configs in the overlay, driving nix-vim's DAP
+  framework, UI and persistent breakpoints; `qgis-dev debugprep` helper.
+  New journey step 8 "Debugging with DAP" with an illustrated walkthrough
+  (11th UML diagram) — breakpoints, stepping, inspection, attach.
+- **FAQ** page (why Neovim not Qt Creator, first-download, incremental
+  builds, clangd index location/reuse, what keeps you waiting).
+
+### Fixed
+
+- Bootstrap excludes `.cache/` (clangd background index) from git, so the
+  editor index never dirties the pristine checkout.
 
 - Kartoza-branded devshell activation banner (branch, profile, ccache
   stats, last build) on every direnv load and `nix develop` (FR-N9);

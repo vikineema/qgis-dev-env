@@ -58,12 +58,49 @@ build — and failures land in the **quickfix list** at the exact
 A supplementary ctags file covers what LSPs don't index — SIP bindings,
 CMake variables, shell — regenerate with `<leader>pg`.
 
-!!! note "First-open heaviness, and what tames it"
-    Two things are deliberately bounded so a 1.5 M-file tree doesn't melt
-    your editor: clangd's **background index** is built once (CPU-heavy on
-    the first day, instant ever after), and **lua-language-server** is
-    fenced by the overlay's `.luarc.json` so it never crawls `build/`,
-    `.git`, `src/` and friends looking for Lua — without it, luals takes
-    minutes to start in a QGIS checkout.
+## What happens the first time you open Neovim
+
+The environment front-loads some one-time work so that everything is fast
+afterwards. On the **first** `nvim` in a fresh checkout, expect:
+
+| Task | What it's doing | How long | Blocks you? |
+|---|---|---|---|
+| clangd **background index** | Parsing every TU in `compile_commands.json` to build the cross-reference database | Tens of minutes for QGIS | No — runs in the background |
+| lua-language-server | Loading Lua runtime (fenced by `.luarc.json`, see below) | Seconds | No |
+| Treesitter | Grammars ship prebuilt with nix-vim | None | No |
+
+While clangd indexes, **completion and diagnostics for the file you have
+open work almost immediately** — it indexes the open translation unit
+first. What ripens over the next several minutes is *project-wide*
+intelligence: go-to-definition into files you haven't opened, and
+find-all-references. A progress indicator shows in the statusline/notify
+area until it settles.
+
+### Where the index lives, and is it reused?
+
+clangd writes its index to **`<checkout>/.cache/clangd/index/`** — one
+shard per file. It is **persistent and reused across sessions**: index once,
+and every later `nvim` starts with full project intelligence immediately.
+Bootstrap adds `.cache/` to the local git excludes, so it never dirties
+`git status`. Two consequences worth knowing:
+
+- Each **worktree** has its own `.cache/` and indexes once on its own —
+  clangd's background index is project-relative, not shared. A new worktree
+  is fast to *build* (shared ccache) but re-indexes for the editor.
+- Deleting `.cache/clangd` (or `git clean -fdx`, which would) forces a full
+  re-index next time. Don't, unless the index is corrupt.
+
+!!! note "Why luals used to hang — and doesn't now"
+    lua-language-server roots at the checkout and, unfenced, crawls the
+    whole 1.5 M-file tree looking for Lua to preload — minutes of hang. The
+    overlay's `.luarc.json` caps preload and ignores `build/`, `.git`,
+    `src/` and friends, so it starts in seconds.
+
+## Debugging
+
+When you need to step through code rather than read it, the same editor
+does that too — see [Debugging with DAP](08-debugging.md): breakpoints,
+variable inspection, the call stack, and attach-to-running, all on
+`<leader>d`.
 
 Continue to [6 · Pre-commit & standards](06-precommit.md).

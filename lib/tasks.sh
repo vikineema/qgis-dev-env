@@ -348,6 +348,17 @@ cmd_report() {
   fi
 }
 
+cmd_debugprep() {
+  # Prepare a debug launch: self-heal the build-tree marker, warn if PyQGIS
+  # staging is absent, and print the binary path on stdout for the DAP config.
+  local bin="$BUILD/output/bin/qgis"
+  [[ -x "$bin" ]] || die "no built binary at $bin — run 'qgis-dev build' first"
+  ensure_build_marker
+  [[ -f "$BUILD/output/python/qgis/PyQt/__init__.py" ]] ||
+    note "python staging missing — run 'qgis-dev configure' if you need PyQGIS in the debugger"
+  printf '%s\n' "$bin"
+}
+
 ensure_build_marker() {
   # qgisbuildpath.txt tells QGIS binaries they run from a build tree (PyQGIS
   # and resources then resolve against the build output, not the install
@@ -736,6 +747,7 @@ qgis-dev — QGIS developer tasks (shared by `nix run .#<task>` and Neovim)
   build [-jN] [target…]      ninja build (all cores by default; timed + logged)
   clean                      ninja clean
   relink                     clear linked outputs + reconfigure (objects kept)
+  debugprep                  self-heal + print the binary path (used by nvim DAP)
   run [args…]                launch built QGIS with an isolated profile
   test [ctest args…]         run ctest (offscreen)
   test-file <path>           run the test matching a source file
@@ -785,6 +797,10 @@ clean)
 relink)
   init
   cmd_relink
+  ;;
+debugprep)
+  init
+  cmd_debugprep
   ;;
 run)
   init

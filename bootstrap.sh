@@ -45,6 +45,7 @@ EXCLUDES=(
   ".dev-env/"
   ".direnv/"
   ".claude/"
+  ".cache/" # clangd background index (.cache/clangd), pyright, etc.
   "result"
   "*.pre-qgis-dev-env"
   "qgis-dev-env/" # the sidecar itself, embedded in the checkout (not a submodule)

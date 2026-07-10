@@ -72,6 +72,28 @@ relinks gui + the app; `qgis_core` is untouched. Editing a widely-included
 inherent to C++, not a tooling limitation. See
 [Build, run & profiles](../internals/build-run.md).
 
+## Where does the clangd index live, and is it reused?
+
+In `<checkout>/.cache/clangd/index/`, one shard per file, and **yes — it
+persists and is reused across every session**. The first `nvim` in a fresh
+checkout spends tens of minutes background-indexing QGIS (you can work
+meanwhile; the open file is intelligent almost immediately), and every
+session after that starts fully indexed. Bootstrap excludes `.cache/` from
+git so it never dirties `git status`. Each worktree indexes once on its own
+(the index is project-relative). See
+[Editing with Neovim](../getting-started/05-neovim.md).
+
+## What will keep me waiting, and how often?
+
+| One-time cost | When | Roughly |
+|---|---|---|
+| Toolchain download (`direnv allow`) | first activation per machine/pin | minutes |
+| Cold QGIS build | first `qgis-dev build` | hours (then ccache-warm) |
+| clangd background index | first `nvim` per checkout/worktree | tens of minutes, non-blocking |
+
+Everything after those is seconds-to-minutes. The [Under the
+Hood](../internals/index.md) section explains why each is one-time.
+
 ## Can I run several feature branches at once?
 
 Yes — `qgis-dev worktree add <branch>` creates a sibling worktree, already
