@@ -52,7 +52,23 @@ ninja never brings it back.
 
 **Fence:** never `rm -rf build/output` bare — use **`qgis-dev relink`**,
 which clears linked artifacts, keeps every compiled object, and
-reconfigures so configure-time files are regenerated.
+reconfigures so configure-time files are regenerated. Additionally,
+`qgis-dev build`/`run` now self-heal: a missing marker is rewritten
+before launch.
+
+### QGIS starts but "Couldn't load SIP module / No module named 'qgis'"
+
+**Symptom:** the app runs, Python is disabled; the reported
+`Python path` starts with `…/build/output/share/qgis/python` (install
+layout) instead of `…/build/output/python` (where the bindings are).
+
+**Cause:** running-from-build-tree detection failed (missing
+`qgisbuildpath.txt`), or something forced install-layout paths —
+setting `QGIS_PREFIX_PATH` does exactly that when detection fails.
+
+**Fence:** `qgis-dev run` restores the marker automatically and launches
+bare (no `QGIS_PREFIX_PATH`). If you launch the binary by hand, do the
+same: `./build/output/bin/qgis` with no prefix env.
 
 ### A stale `build/` from another toolchain
 
