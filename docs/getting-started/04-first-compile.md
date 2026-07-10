@@ -25,7 +25,10 @@ for clangd — all from the `debug` profile), then builds **on all cores**.
 
 This first build is the only expensive one you will ever pay on this
 machine: every object file lands in a 50 GB ccache shared across all your
-checkouts, worktrees and branches.
+checkouts, worktrees and branches. Budget generously — a full Debug build
+of QGIS (~6,000 compilation units) measured **~4.5 hours on an 8-core
+Ryzen 9 7940HS laptop** sustaining 4.1 GHz all-core; desktop-class CPUs
+with more cores do proportionally better. Start it, go do something else.
 
 While you wait, two optional quality-of-life switches:
 
@@ -47,7 +50,14 @@ qgis-dev run
 
 Launches your freshly built QGIS with an **isolated throwaway profile**
 (under `.dev-env/profiles/`), so a debug build can never corrupt your real
-QGIS user profile.
+QGIS user profile. The launcher is deliberately smart: it restores the
+running-from-build-tree marker and the Python staging if anything
+disturbed them, and it sets no `QGIS_PREFIX_PATH` (which would misdirect
+PyQGIS — see [Troubleshooting](../reference/troubleshooting.md)).
+
+Expect some benign console noise on a Debug build: Qt Multimedia probing
+pipewire, and stack traces attached to ordinary warnings — that's the
+debug message handler being thorough, not a crash.
 
 ## The everyday loop from here on
 

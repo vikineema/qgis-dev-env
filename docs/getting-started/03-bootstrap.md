@@ -57,7 +57,7 @@ and your last logged build:
 ────────────────────────────────────────────────────────────────
   branch     master
   profile    debug   configured yes   boost off
-  ccache     12.3 / 50.0 GB   hits 4521 / 5820 (77.7%)
+  ccache     12.3/50.0 GB (24.6%)   hits 4521 / 5820 (77.7%)
   last build ok in 94s, 92% ccache (debug, 2026-07-10)
   ...
 ```

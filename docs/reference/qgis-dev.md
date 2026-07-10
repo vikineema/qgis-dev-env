@@ -24,7 +24,7 @@ Neovim menu. Run from anywhere inside a QGIS checkout or worktree.
 
 | Command | Does |
 |---|---|
-| `qgis-dev run [args…]` | Launch the built QGIS with an isolated throwaway profile |
+| `qgis-dev run [args…]` | Launch the built QGIS with an isolated throwaway profile; self-heals the build-tree marker and Python staging, launches bare (no `QGIS_PREFIX_PATH`) |
 | `qgis-dev test [ctest args…]` | `ctest --output-on-failure` (offscreen platform) |
 | `qgis-dev test-file <path>` | Run the test matching a source file's name |
 

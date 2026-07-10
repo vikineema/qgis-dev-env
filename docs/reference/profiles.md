@@ -16,10 +16,12 @@ is stored per-worktree in `.dev-env/profile` and reconfigures on switch.
 | `release` | RelWithDebInfo | Everything on | Profiling and performance work — Debug timings mislead |
 | `asan-ubsan` | Debug + sanitizers | 3D/PDAL/WebEngine off | Memory and UB bug hunts (`qgis-dev qa asan`) |
 
-All profiles share: Ninja, ccache compiler launchers, mold linker,
-`compile_commands.json` export, and (Debug) split dwarf + gdb-index for
-fast links and fast debugger startup. ccache objects are **namespaced per
-profile**, so switching never poisons the cache.
+All profiles share: Ninja, ccache compiler launchers, the (wrapped) mold
+linker, `compile_commands.json` export, and (Debug) split dwarf +
+gdb-index for fast links and fast debugger startup. Debug-config profiles
+also pass `-UGDAL_DEBUG` (see
+[Troubleshooting](troubleshooting.md) for why). ccache objects are
+**namespaced per profile**, so switching never poisons the cache.
 
 ## Tweaking individual flags
 

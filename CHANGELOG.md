@@ -34,10 +34,21 @@ versioning: [SemVer](https://semver.org/).
   bypasses nix's bintools wrapper, producing binaries without store
   RUNPATHs that fail at build-time tool runs (FR-B15).
 - pkg-config in the devshell (silent cmake feature-probe degradation);
-  UTF-8 locale exported (Qt/uic warnings); Qt plugin-path exports
-  replicated from the dropped upstream hook.
+  UTF-8 locale exported in user context (Qt/uic warnings); Qt
+  plugin-path exports replicated from the dropped upstream hook.
 - Banner prints exactly once per activation; devshell reloads when
   `lib/tasks.sh` changes (it is baked into the `qgis-dev` binary).
+- **Running from the build tree on Wayland**: Qt plugin roots now cover
+  qtwayland (platform), qtsvg/qtimageformats (icons) and a QML import
+  path for qtdeclarative (welcome screen); the harmful
+  `QT_QPA_PLATFORM_PLUGIN_PATH` pin is gone.
+- **PyQGIS from the build tree**: runners launch bare (no
+  `QGIS_PREFIX_PATH`, which selects install-layout paths) and self-heal
+  the `qgisbuildpath.txt` marker and the configure-staged `qgis.PyQt`
+  shim; doctor checks the staging.
+- Recovery for stranded staging files (a raced parallel build can leave
+  a *file* where `output/python/qgis/<pkg>` needs a directory), blocking
+  later configures — documented in the handbook.
 
 ## [0.2.0] - 2026-07-09
 
