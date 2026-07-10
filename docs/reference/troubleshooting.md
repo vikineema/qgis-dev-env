@@ -91,6 +91,23 @@ produces confusing failures. If a build tree predates your current
 `flake.lock`, retire it (`rm -rf build && qgis-dev build`) — the ccache
 keeps the cost honest.
 
+### Qt runtime pieces missing (wayland platform, SVG icons, QML modules)
+
+**Symptoms:** `Could not find the Qt platform plugin "wayland"` then a
+GLX abort; blank/missing toolbar icons; or
+`module "QtQuick.Controls" … not found` from the welcome screen.
+
+**Cause:** packaged Qt apps get plugin and QML paths injected by nix's Qt
+wrapper at install time; a build-tree binary only sees what the devshell
+exports. Each Qt add-on lives in its own store path (qtwayland, qtsvg,
+qtimageformats, qtdeclarative).
+
+**Fence:** the devshell exports `QT_PLUGIN_PATH` roots for
+qtbase/qtwayland/qtsvg/qtimageformats and `QML_IMPORT_PATH` for
+qtdeclarative. If a new Qt feature complains, add its package to those
+exports in `flake.nix` — and never set `QT_QPA_PLATFORM_PLUGIN_PATH`,
+which restricts the platform search to a single directory.
+
 ## Environment & editor
 
 ### Neovim takes minutes to start in the checkout
