@@ -1,0 +1,45 @@
+@startuml activation
+' SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+' SPDX-License-Identifier: MIT
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName sans
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #54A2CC
+  LifeLineBorderColor #8A8B8B
+  LifeLineBackgroundColor #F5F5F2
+  ParticipantBackgroundColor #F5F5F2
+  ParticipantBorderColor #54A2CC
+  ParticipantFontColor #383939
+  ActorBorderColor #383939
+}
+title Sequence — devshell activation (direnv)
+
+actor Developer as dev
+participant "shell (fish)" as sh
+participant "direnv" as de
+participant ".envrc" as env
+participant "nix (flake)" as nix
+participant "/nix/store" as store
+participant "shell-motd.sh" as motd
+
+dev -> sh : cd ~/dev/cpp/QGIS
+sh -> de : chpwd hook
+activate de
+de -> env : source .envrc\n(-> qgis-dev-env/overlay/envrc)
+env -> env : resolve sidecar from symlink,\nexport CCACHE_DIR, QGIS_DEV_SIDECAR, LANG
+env -> nix : use flake path:qgis-dev-env
+activate nix
+nix -> store : realise devShells.default\n(cached after first time)
+store --> nix : toolchain + qgis-dev on PATH
+nix --> de : environment diff
+deactivate nix
+env -> motd : source banner
+motd -> dev : print branch / profile / ccache / last build
+de --> sh : env applied
+deactivate de
+note right of nix
+  re-evaluates only when
+  flake.nix / flake.lock / tasks.sh change
+end note
+@enduml

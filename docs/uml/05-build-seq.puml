@@ -1,0 +1,50 @@
+@startuml build
+' SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+' SPDX-License-Identifier: MIT
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName sans
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #54A2CC
+  LifeLineBorderColor #8A8B8B
+  LifeLineBackgroundColor #F5F5F2
+  ParticipantBackgroundColor #F5F5F2
+  ParticipantBorderColor #54A2CC
+  ParticipantFontColor #383939
+  ActorBorderColor #383939
+}
+title Sequence — qgis-dev build
+
+actor Developer as dev
+participant "qgis-dev" as qd
+participant "profile\n(.dev-env/profile)" as prof
+participant "cmake" as cm
+participant "ninja" as nj
+participant "ccache + mold" as cc
+participant "build-log.tsv" as log
+participant "powerprofilesctl" as pp
+
+dev -> qd : qgis-dev build [-jN] [target]
+activate qd
+alt no build.ninja yet
+  qd -> prof : read active profile
+  qd -> cm : configure (Ninja, ccache launchers,\nmold, -UGDAL_DEBUG, export compile_commands)
+end
+opt perf boost armed
+  qd -> pp : set performance
+end
+qd -> cc : snapshot ccache counters (h0,m0)
+qd -> nj : ninja (all cores, CCACHE_NAMESPACE=profile)
+activate nj
+nj -> cc : compile via ccache -> link via mold
+cc --> nj : objects (hit or fresh)
+nj --> qd : exit code
+deactivate nj
+qd -> cc : snapshot counters (h1,m1)
+qd -> log : append ts,branch,profile,target,\njobs,duration,hit%,result,hits,misses
+opt perf boost armed
+  qd -> pp : restore previous profile
+end
+qd -> dev : "build ok: Ns, ccache X% (h/m)"
+deactivate qd
+@enduml

@@ -1,0 +1,54 @@
+@startuml flake
+' SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+' SPDX-License-Identifier: MIT
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName sans
+skinparam shadowing false
+skinparam component {
+  BackgroundColor #F5F5F2
+  BorderColor #54A2CC
+  FontColor #383939
+}
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #8A8B8B
+}
+skinparam ArrowColor #54A2CC
+title Structure — flake.nix inputs and outputs
+
+package "inputs" {
+  [qgis\n(github:qgis/QGIS)] as inqgis
+  [nixpkgs\n(follows qgis/nixpkgs)] as innix
+  [nix-vim\n(github:timlinux/nix-vim)] as invim
+}
+
+package "outputs" {
+  package "devShells" {
+    [default\n= upstream QGIS packages\n+ toolchain + LSPs + QA\n+ nix-vim + qgis-dev] as dsdef
+    [tooling\n(sidecar hacking + docs)] as dstool
+  }
+  package "apps  (nix run .#<x>)" {
+    [task apps\nconfigure..report..doctor] as apptasks
+    [bootstrap] as appboot
+    [handbook / handbook-build\nhandbook-pdf / diagrams] as appdocs
+  }
+  package "checks" {
+    [tests (bats)] as chkbats
+    [shellcheck] as chksh
+  }
+  [formatter (nixfmt)] as fmt
+}
+
+inqgis --> dsdef : inputsFrom packages\n(all build deps)
+innix --> dsdef : ccache, mold, clangd, valgrind…
+invim --> dsdef : nvim editor
+inqgis ..> innix : pin source
+dsdef ..> apptasks : nix develop --command qgis-dev
+appdocs ..> dstool : mkdocs / plantuml
+
+note bottom of dsdef
+  Composed on upstream PACKAGES,
+  not their devShell — so we own the
+  activation banner (no dev-help noise).
+end note
+@enduml

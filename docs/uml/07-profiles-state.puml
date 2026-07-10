@@ -1,0 +1,34 @@
+@startuml profiles
+' SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+' SPDX-License-Identifier: MIT
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName sans
+skinparam shadowing false
+skinparam state {
+  BackgroundColor #F5F5F2
+  BorderColor #54A2CC
+  FontColor #383939
+  ArrowColor #8A8B8B
+}
+title State — build profiles (qgis-dev profile <name>)
+
+[*] --> debug : default
+
+state debug : full features (3D, PDAL,\nWebEngine, tests); split-dwarf
+state minimal : 3D/PDAL/WebEngine/\nbindings/tests OFF — fastest
+state release : RelWithDebInfo —\nfor profiling
+state "asan-ubsan" as asan : sanitizers ON,\nheavy features OFF
+
+debug --> minimal : profile minimal
+minimal --> debug : profile debug
+debug --> release : profile release
+release --> debug : profile debug
+debug --> asan : qa asan / profile asan-ubsan
+asan --> debug : profile debug
+
+note bottom
+  Each switch reconfigures build/.
+  ccache is namespaced per profile,
+  so objects never mix.
+end note
+@enduml

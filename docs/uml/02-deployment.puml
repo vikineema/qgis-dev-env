@@ -1,0 +1,61 @@
+@startuml deployment
+' SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+' SPDX-License-Identifier: MIT
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName sans
+skinparam shadowing false
+skinparam node {
+  BackgroundColor #F5F5F2
+  BorderColor #54A2CC
+  FontColor #383939
+}
+skinparam artifact {
+  BackgroundColor #FFFFFF
+  BorderColor #8A8B8B
+}
+skinparam database {
+  BackgroundColor #FCF3E0
+  BorderColor #EEB348
+}
+skinparam ArrowColor #8A8B8B
+
+title Deployment view — where everything lives on disk
+
+node "Developer machine (NixOS)" {
+
+  node "~/dev/cpp/QGIS/  (git: qgis/QGIS)" as co {
+    artifact "src/, python/, CMakeLists.txt" as upstream
+    artifact "build/  (Ninja + objects)" as build
+    artifact ".dev-env/  (per-checkout state)" as devenv
+    node "qgis-dev-env/  (git: timlinux/qgis-dev-env)" as embed {
+      artifact "flake.nix / flake.lock" as flake
+      artifact "lib/, overlay/, profiles/" as libs
+      artifact "docs/  (handbook)" as hb
+    }
+    artifact ".envrc -> qgis-dev-env/overlay/envrc\n(+ relative symlinks)" as syms
+  }
+
+  node "/nix/store" as store {
+    artifact "toolchain closure\n(gcc, Qt6, GDAL, clangd, …)" as closure
+    artifact "qgis-dev binary\n(tasks.sh installed)" as qd
+  }
+
+  database "$XDG_STATE_HOME/qgis-dev-env" as xdg {
+    artifact "build-log.tsv" as log
+    artifact "build-report.pdf" as rep
+  }
+
+  database "$XDG_CACHE_HOME/qgis-ccache\n(shared, 50 GB)" as cc
+}
+
+syms ..> libs : resolves into
+flake --> store : nix develop realises
+build --> cc : reads/writes objects
+build ..> log : appended per build
+devenv ..> build : marker, profile, run-profiles
+
+note bottom of embed
+  plain nested clone (NOT a submodule);
+  hidden from upstream via .git/info/exclude
+end note
+@enduml

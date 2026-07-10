@@ -1,0 +1,40 @@
+@startuml bootstrap
+' SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+' SPDX-License-Identifier: MIT
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName sans
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #54A2CC
+  LifeLineBorderColor #8A8B8B
+  LifeLineBackgroundColor #F5F5F2
+  ParticipantBackgroundColor #F5F5F2
+  ParticipantBorderColor #54A2CC
+  ParticipantFontColor #383939
+  ActorBorderColor #383939
+}
+title Sequence — bootstrap.sh (overlay install)
+
+actor Developer as dev
+participant "bootstrap.sh" as bs
+participant "QGIS checkout" as co
+participant ".git/info/exclude" as excl
+participant ".git/hooks" as hooks
+
+dev -> bs : ./qgis-dev-env/bootstrap.sh .
+activate bs
+bs -> co : validate (CMakeLists.txt, src/core)
+bs -> excl : write managed block\n(overlay paths + qgis-dev-env/)
+bs -> co : create RELATIVE symlinks\n(.envrc, .nvim.lua, .clangd, …)
+bs -> hooks : install pre-push guard\n(if none present)
+bs -> co : pre-commit install\n(upstream QGIS hooks)
+bs -> co : git config blame.ignoreRevsFile
+bs -> co : mkdir .dev-env, write sidecar path, PROMPT.log
+bs -> co : verify `git status` is clean
+alt overlay visible to git
+  bs -> dev : ABORT — isolation failed
+else clean
+  bs -> dev : done — next: direnv allow
+end
+deactivate bs
+@enduml

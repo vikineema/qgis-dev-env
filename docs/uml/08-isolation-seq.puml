@@ -1,0 +1,45 @@
+@startuml isolation
+' SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+' SPDX-License-Identifier: MIT
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName sans
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #54A2CC
+  LifeLineBorderColor #8A8B8B
+  LifeLineBackgroundColor #F5F5F2
+  ParticipantBackgroundColor #F5F5F2
+  ParticipantBorderColor #54A2CC
+  ParticipantFontColor #383939
+  ActorBorderColor #383939
+}
+title Sequence — the three isolation layers (no leak to upstream)
+
+actor Developer as dev
+participant "git" as git
+participant ".git/info/exclude" as excl
+participant "pre-push guard" as guard
+participant "qgis-dev doctor" as doc
+participant "upstream remote" as up
+
+== Layer 1: invisible to git ==
+dev -> git : git status
+git -> excl : consult local ignore
+excl --> git : overlay + embed excluded
+git --> dev : clean (overlay never staged)
+
+== Layer 2: guard on push ==
+dev -> git : git push (even after `git add -f`)
+git -> guard : pre-push hook
+guard -> guard : scan commits for overlay paths
+alt overlay path found
+  guard --> dev : BLOCKED — remove and retry
+else clean
+  guard -> up : push proceeds
+end
+
+== Layer 3: audit ==
+dev -> doc : qgis-dev doctor
+doc -> git : status --porcelain (every worktree)
+doc --> dev : isolation intact / names any breach
+@enduml

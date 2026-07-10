@@ -1,0 +1,65 @@
+@startuml component
+' SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+' SPDX-License-Identifier: MIT
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName sans
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam roundcorner 8
+skinparam component {
+  BackgroundColor #F5F5F2
+  BorderColor #54A2CC
+  FontColor #383939
+}
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #8A8B8B
+  FontColor #383939
+}
+skinparam database {
+  BackgroundColor #FCF3E0
+  BorderColor #EEB348
+}
+skinparam ArrowColor #54A2CC
+
+title Component view — qgis-dev-env
+
+actor "Developer" as dev
+
+package "QGIS checkout (upstream, pristine)" as checkout {
+  [src/, python/, CMakeLists.txt] as src
+  [build/ (Ninja tree)] as build
+  component "overlay symlinks\n.envrc .nvim.lua .clangd\npyrightconfig .luarc" as links
+  [.git/info/exclude\n+ pre-push guard] as excl
+}
+
+package "qgis-dev-env/ (embedded sidecar)" as sidecar {
+  [flake.nix\n(inputs · devShells · apps · checks)] as flake
+  [lib/tasks.sh\n= qgis-dev] as tasks
+  [overlay/*\nreal dotfiles] as overlay
+  [profiles/*.profile] as profiles
+  [suppressions/*.supp] as supps
+  [docs/ (handbook)] as docs
+}
+
+cloud "nix store\n(pinned toolchain)" as store
+database "XDG state\nbuild-log.tsv\nreports" as state
+database "shared ccache\n(50 GB)" as ccache
+
+dev --> tasks : qgis-dev <cmd>\n/ <leader>p
+dev --> checkout : edit code (nvim)
+flake --> store : realises devshell
+tasks --> build : configure / ninja
+build --> ccache : object cache
+build --> state : log each build
+overlay ..> links : symlink target
+flake ..> excl : bootstrap registers
+tasks ..> profiles : active profile
+tasks ..> supps : valgrind
+store --> checkout : compilers, Qt6, LSPs on PATH
+
+note bottom of excl
+  upstream git never sees
+  the overlay or the embed
+end note
+@enduml

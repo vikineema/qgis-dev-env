@@ -51,6 +51,13 @@ PAGES=(
   "reference/worktrees.md"
   "reference/qa.md"
   "reference/troubleshooting.md"
+  "internals/index.md"
+  "internals/architecture.md"
+  "internals/the-flake.md"
+  "internals/task-runner.md"
+  "internals/bootstrap-isolation.md"
+  "internals/activation.md"
+  "internals/build-run.md"
   "about/index.md"
   "about/ai-policy.md"
   "about/specification.md"
@@ -96,7 +103,9 @@ transform() {
       -e '/^<span class="kz-eyebrow">/d' \
       -e '/!\[.*\](assets\/qgis-dev-env\.png)/d' \
       -e 's/:\(material\|simple\|octicons\|fontawesome\)[a-z0-9_-]*: \?//g' \
-      -e 's/{ \.kz-cta__[a-z]* }//g' -e 's/{ \.kz-figure }//g' \
+      -e 's/{ \.[a-zA-Z0-9_. -]* }//g' \
+      -e "s#](\.\./assets/uml/\([a-z0-9-]*\)\.svg)#](${WORK}/img/\1.pdf)#g" \
+      -e "s#](\.\./assets/\([a-z0-9-]*\)\.svg)#](${WORK}/img/\1.pdf)#g" \
       -e 's/++\([a-zA-Z-]*\)++/`\1`/g' \
       -e 's/💗/love/g' \
       -e 's/🚀 \?//g' -e 's/⌨ \?//g' -e 's/🔒 \?//g' -e 's/📐 \?//g' \
@@ -112,6 +121,14 @@ transform() {
       -e 's/│/|/g' -e 's/└/`/g' -e 's/├/|/g' -e 's/─/-/g' \
       -e 's/×/x/g'
 }
+
+# Pre-render SVG figures (UML + sample infographic) to PDF so pdflatex can
+# embed them as vector graphics (approach from kartoza/qgis-desktop-docker).
+mkdir -p "$WORK/img"
+for svg in "$DOCS_DIR"/assets/uml/*.svg "$DOCS_DIR"/assets/build-report-sample.svg; do
+  [ -f "$svg" ] || continue
+  rsvg-convert -f pdf -o "$WORK/img/$(basename "$svg" .svg).pdf" "$svg"
+done
 
 {
   cat <<'META'

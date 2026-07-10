@@ -1,0 +1,43 @@
+@startuml run
+' SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+' SPDX-License-Identifier: MIT
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName sans
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #54A2CC
+  LifeLineBorderColor #8A8B8B
+  LifeLineBackgroundColor #F5F5F2
+  ParticipantBackgroundColor #F5F5F2
+  ParticipantBorderColor #54A2CC
+  ParticipantFontColor #383939
+  ActorBorderColor #383939
+}
+title Sequence — qgis-dev run (self-healing launch)
+
+actor Developer as dev
+participant "qgis-dev" as qd
+participant "build/output" as out
+participant "QGIS binary" as qgis
+
+dev -> qd : qgis-dev run
+activate qd
+qd -> out : binary present?
+alt missing qgisbuildpath.txt
+  qd -> out : rewrite marker\n(source + output paths)
+  note right : else QGIS uses install-layout\npaths and PyQGIS breaks
+end
+alt qgis.PyQt staging missing
+  qd -> qd : reconfigure (restores staged shim)
+end
+qd -> qgis : launch (NO QGIS_PREFIX_PATH,\n--profiles-path .dev-env/profiles)
+activate qgis
+note right of qgis
+  bare launch + marker =>
+  build-tree paths, Python enabled,
+  throwaway profile
+end note
+qgis --> dev : QGIS window (Wayland)
+deactivate qgis
+deactivate qd
+@enduml

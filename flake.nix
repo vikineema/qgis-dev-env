@@ -312,6 +312,24 @@
             );
             meta.description = "Build the handbook site into ./site (run from the sidecar repo)";
           };
+          diagrams = {
+            type = "app";
+            program = toString (
+              pkgs.writeShellScript "qgis-dev-diagrams" ''
+                export PATH=${
+                  lib.makeBinPath [
+                    pkgs.plantuml
+                    pkgs.coreutils
+                  ]
+                }:$PATH
+                mkdir -p docs/assets/uml
+                echo "Rendering UML diagrams (docs/uml/*.puml -> docs/assets/uml/*.svg)…"
+                plantuml -tsvg -nometadata -o "$PWD/docs/assets/uml" docs/uml/*.puml
+                echo "Done: $(ls docs/assets/uml/*.svg | wc -l) SVG diagrams."
+              ''
+            );
+            meta.description = "Render the UML diagrams (PlantUML -> SVG) into docs/assets/uml";
+          };
           handbook-pdf = {
             type = "app";
             program = toString (
@@ -320,6 +338,7 @@
                   lib.makeBinPath [
                     pkgs.pandoc
                     pdfLatex
+                    pkgs.librsvg
                     pkgs.coreutils
                     pkgs.gnused
                     pkgs.gawk

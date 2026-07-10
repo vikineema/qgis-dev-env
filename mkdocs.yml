@@ -169,6 +169,14 @@ nav:
     - Worktrees: reference/worktrees.md
     - QA &amp; diagnostics: reference/qa.md
     - Troubleshooting: reference/troubleshooting.md
+  - Under the Hood:
+    - internals/index.md
+    - Architecture: internals/architecture.md
+    - The flake: internals/the-flake.md
+    - The task runner: internals/task-runner.md
+    - Bootstrap &amp; isolation: internals/bootstrap-isolation.md
+    - Activation &amp; devshell: internals/activation.md
+    - Build, run &amp; profiles: internals/build-run.md
   - About:
     - about/index.md
     - AI policy: about/ai-policy.md

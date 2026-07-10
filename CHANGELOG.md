@@ -13,6 +13,16 @@ versioning: [SemVer](https://semver.org/).
 
 ### Added
 
+- **`qgis-dev report`**: branded multi-panel build-performance infographic
+  (PDF/SVG/PNG) — log-scaled duration trend, ccache hit-rate area,
+  average duration per profile, summary band. `nix run .#report`,
+  `<leader>pR`. Build log gained per-build ccache hit/miss counts.
+- **Under the Hood** handbook section: architecture, flake, task runner,
+  bootstrap/isolation, activation and build/run internals, illustrated
+  with **10 PlantUML diagrams** rendered to SVG (`nix run .#diagrams`)
+  and embedded as vector PDF in the handbook.
+- Kartoza hero banner on the landing page, README and PDF cover.
+
 - Kartoza-branded devshell activation banner (branch, profile, ccache
   stats, last build) on every direnv load and `nix develop` (FR-N9);
   devshell now composes on upstream's packages, not their devShell.

@@ -1,0 +1,57 @@
+@startuml taskrunner
+' SPDX-FileCopyrightText: 2026 Kartoza (Pty) Ltd <tim@kartoza.com>
+' SPDX-License-Identifier: MIT
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName sans
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #F5F5F2
+  BorderColor #54A2CC
+  FontColor #383939
+  AttributeFontColor #676869
+  ArrowColor #8A8B8B
+}
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageBorderColor #8A8B8B
+title Structure — one task runner, three front-ends (DRY)
+
+package "front-ends" {
+  class "Neovim <leader>p" as nvim <<.nvim.lua>>
+  class "nix run .#<task>" as nixrun <<flake apps>>
+  class "terminal" as term <<devshell>>
+}
+
+class "qgis-dev  (lib/tasks.sh)" as qd {
+  +init() : resolve ROOT, SIDECAR, BUILD, STATE
+  --commands--
+  +configure() / build() / clean()
+  +run() / test() / test_file()
+  +docs() / precommit() / tidy() / tags()
+  +profile() / flags() / targets()
+  +worktree() / qa()
+  +stats() / report() / perf() / ccache-*
+  +doctor()
+}
+
+class "profiles/*.profile" as prof
+class "suppressions/*.supp" as supp
+class "report.gnuplot" as rg
+class "shell-motd.sh" as motd
+class "build-log.tsv" as log
+
+nvim ..> qd : vim.system(async)\nquickfix on failure
+nixrun ..> qd : nix develop --command
+term ..> qd : direct
+qd ..> prof : configure reads
+qd ..> supp : qa memcheck
+qd ..> rg : report drives gnuplot
+qd ..> log : build appends / stats+report read
+motd ..> log : banner reads last row
+
+note bottom of qd
+  Single implementation (NFR-M1).
+  Installed into the nix store as a
+  binary; terminal & editor call the
+  same code — no drift.
+end note
+@enduml

@@ -79,6 +79,9 @@ jobs:
           esac
           echo "name=qgis-dev-env-handbook-${tag}.pdf" >> "$GITHUB_OUTPUT"
 
+      - name: Render UML diagrams (PlantUML -> SVG)
+        run: nix run .#diagrams
+
       - name: Build PDF (nix run .#handbook-pdf)
         run: nix run .#handbook-pdf -- "${{ steps.name.outputs.name }}"
 
@@ -136,6 +139,9 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
             accept-flake-config = true
+
+      - name: Render UML diagrams (PlantUML -> SVG)
+        run: nix run .#diagrams
 
       - name: Build site (nix run .#handbook-build)
         run: nix run .#handbook-build
