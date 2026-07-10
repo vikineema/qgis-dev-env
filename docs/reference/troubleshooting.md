@@ -66,9 +66,23 @@ layout) instead of `…/build/output/python` (where the bindings are).
 `qgisbuildpath.txt`), or something forced install-layout paths —
 setting `QGIS_PREFIX_PATH` does exactly that when detection fails.
 
-**Fence:** `qgis-dev run` restores the marker automatically and launches
-bare (no `QGIS_PREFIX_PATH`). If you launch the binary by hand, do the
-same: `./build/output/bin/qgis` with no prefix env.
+**Fence:** `qgis-dev run` restores the marker automatically, reconfigures
+if the `qgis.PyQt` staging is missing, and launches bare (no
+`QGIS_PREFIX_PATH`). If you launch the binary by hand, do the same:
+`./build/output/bin/qgis` with no prefix env.
+
+### Configure fails: "file failed to create directory … because: File exists"
+
+**Symptom:** cmake dies creating `build/output/python/qgis/<name>` and
+`ls -la` shows `<name>` is a regular **file** where a directory belongs.
+
+**Cause:** an interrupted/failed parallel build can race the Python
+staging steps and strand a file copy at its parent directory's path.
+Later configures then cannot create the directory.
+
+**Fence:** delete the stray file(s) (`rm build/output/python/qgis/<name>`)
+and reconfigure. Content is always regenerable — everything under
+`build/output` is derived.
 
 ### A stale `build/` from another toolchain
 
