@@ -50,8 +50,15 @@ versioning: [SemVer](https://semver.org/).
 - **Formatter version mismatch**: the editor was reformatting whole files
   with the toolchain's clang-format 19 while QGIS CI enforces 21, churning
   already-compliant lines. clang-format/clang-tidy now come from a
-  dedicated v21 pin, invoked by explicit path; nix-vim's whole-file
-  autoformat is disabled for C/C++ so it no longer fights.
+  dedicated v21 pin, invoked by explicit path.
+- **Comment rewrapping / whole-file churn on save**: two causes fixed —
+  (a) `qgis-dev fmt` now pins `--style=file:<checkout>/.clang-format`
+  explicitly so a config-discovery miss can't fall back to LLVM defaults
+  (80-col + comment reflow) against QGIS's `ColumnLimit: 200` /
+  `ReflowComments: false`; (b) nix-vim configures conform's
+  `format_on_save` as a static table that ignored `vim.b.disable_autoformat`,
+  so it kept whole-file-formatting C/C++ on save — it's now re-wrapped as a
+  function honouring the opt-out, leaving only the touched-lines formatter.
 - Bootstrap excludes `.cache/` (clangd background index) from git, so the
   editor index never dirties the pristine checkout.
 

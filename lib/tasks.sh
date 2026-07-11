@@ -512,9 +512,15 @@ cmd_fmt() {
   esac
   local cf="${QGIS_DEV_CLANG_FORMAT:-clang-format}"
   command -v "$cf" >/dev/null 2>&1 || [[ -x "$cf" ]] || die "clang-format not available (enter the devshell)"
+  # Pin the config to the checkout's .clang-format explicitly. Without this,
+  # a config-discovery miss silently falls back to LLVM defaults (ColumnLimit
+  # 80 + comment reflow), which wraps QGIS's long comments — QGIS sets
+  # ColumnLimit 200 and ReflowComments false, so touched lines never rewrap.
+  local style="file"
+  [[ -f "$ROOT/.clang-format" ]] && style="file:$ROOT/.clang-format"
 
   if [[ "$all" -eq 1 ]] || ! git -C "$ROOT" ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
-    "$cf" -i --style=file "$f"
+    "$cf" -i --style="$style" "$f"
     if [[ "$all" -eq 1 ]]; then
       note "clang-format (whole file): $(basename "$f")"
     else
@@ -538,7 +544,7 @@ cmd_fmt() {
     note "no changed lines in $(basename "$f")"
     return 0
   fi
-  "$cf" -i --style=file "${ranges[@]}" "$f"
+  "$cf" -i --style="$style" "${ranges[@]}" "$f"
   note "clang-format (${#ranges[@]} touched range(s)): $(basename "$f")"
 }
 

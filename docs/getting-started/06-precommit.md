@@ -64,8 +64,13 @@ solves:
   devshell therefore sources clang-format/clang-tidy at **v21** (a separate
   pinned input) and points `qgis-dev` straight at them.
 - **Minimal diffs.** Only your touched line ranges are reformatted, so a
-  save never churns code you didn't write. nix-vim's whole-file
-  format-on-save is disabled for these buffers so the two don't fight.
+  save never churns code you didn't write — including **never rewrapping
+  comments you didn't edit** (QGIS sets `ColumnLimit: 200` and
+  `ReflowComments: false`; the formatter is pinned to the checkout's
+  `.clang-format` explicitly so it can't silently fall back to LLVM defaults
+  that wrap at 80). nix-vim's whole-file format-on-save is re-wrapped to
+  honour the per-buffer opt-out, so it no longer fights or reformats the
+  whole file.
 
 | Action | Key | Scope |
 |---|---|---|

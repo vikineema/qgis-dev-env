@@ -295,9 +295,27 @@ map('<leader>pl', function()
   task({ 'tidy', vim.fn.expand('%:p') }, { title = 'clang-tidy', efm = efm_build, qf_on_success = true })
 end, 'Lint file (clang-tidy)')
 
--- Format ONLY touched lines on save (QGIS clang-format v21). We disable
--- conform/LSP whole-file autoformat for these buffers so they don't fight
--- and rewrite lines you never touched with a different clang-format version.
+-- nix-vim configures conform's format_on_save as a static TABLE, which
+-- ignores vim.b.disable_autoformat — so it would keep formatting the whole
+-- C/C++ buffer on save (wrapping comments, churning untouched lines). Re-wrap
+-- it as a function that honours the flag, preserving the existing per-filetype
+-- formatters, so our C/C++ buffers opt out and only qgis-dev fmt formats them.
+pcall(function()
+  local conform = require('conform')
+  conform.setup({
+    formatters_by_ft = conform.formatters_by_ft,
+    format_on_save = function(bufnr)
+      if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then
+        return nil
+      end
+      return { timeout_ms = 1000, lsp_format = 'fallback' }
+    end,
+  })
+end)
+
+-- Format ONLY touched lines on save (QGIS clang-format v21, explicit config).
+-- conform/LSP whole-file autoformat is disabled for these buffers (above) so
+-- they don't fight and rewrite lines you never touched.
 -- A single BufWritePost (not one-per-buffer) avoids duplicate hooks on reload.
 local fmt_grp = vim.api.nvim_create_augroup('qgis_format_on_save', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
