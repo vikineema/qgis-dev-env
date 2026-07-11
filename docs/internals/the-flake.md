@@ -17,6 +17,7 @@ exposes every task as a runnable app.
 | `qgis` (`github:qgis/QGIS`) | Upstream's own flake — we consume its **packages**, which carry the complete QGIS dependency set |
 | `nixpkgs` | `follows` the QGIS input's nixpkgs, so our extra tools match upstream's library versions |
 | `nix-vim` (`github:timlinux/nix-vim`) | The standard team editor, pinned independently so it behaves as released |
+| `clang-tools-pin` (nixpkgs-unstable) | clang-format / clang-tidy at the QGIS-pinned major (v21); the toolchain nixpkgs only carries LLVM 19, and formatting must match CI (FR-Q4) |
 
 Because inputs are content-addressed and locked in `flake.lock`, every
 colleague resolves the identical toolchain. Entering the directory fetches

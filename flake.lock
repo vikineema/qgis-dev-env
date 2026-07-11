@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "clang-tools-pin": {
+      "locked": {
+        "lastModified": 1783604885,
+        "narHash": "sha256-tzMgSkV7kljEkqIjlgV6F+n+xD+/a35Db8bs7a4BFAo=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "767b0d3ec98a143ad9ed7dfc0d5553510ac27133",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -338,6 +354,7 @@
     },
     "root": {
       "inputs": {
+        "clang-tools-pin": "clang-tools-pin",
         "nix-vim": "nix-vim",
         "nixpkgs": [
           "qgis",

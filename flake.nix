@@ -13,6 +13,11 @@
     # Tim's fully configured Neovim — the standard editor of this devshell
     # (FR-N8). Keeps its own pins so it behaves exactly as released.
     nix-vim.url = "github:timlinux/nix-vim";
+    # Provides clang-format/clang-tidy at the SAME major QGIS pre-commit
+    # pins (v21), which the QGIS-pinned nixpkgs (LLVM 19) does not have.
+    # Formatting must match CI exactly (FR-Q4), so we source these two
+    # binaries from here rather than the toolchain pin.
+    clang-tools-pin.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   };
 
   outputs =
@@ -21,6 +26,7 @@
       nixpkgs,
       qgis,
       nix-vim,
+      clang-tools-pin,
     }:
     let
       systems = [
@@ -79,6 +85,11 @@
             ++ lib.optionals (p ? pyqt6-stubs) [ p.pyqt6-stubs ]
           );
 
+          # clang-format / clang-tidy at v21 to match QGIS pre-commit exactly.
+          # Exposed to qgis-dev via env vars (below) so PATH order can't shadow
+          # them with the toolchain pin's older clang-format.
+          clangToolsCI = clang-tools-pin.legacyPackages.${system}.clang-tools;
+
           lspServers = [
             pkgs.basedpyright
             pkgs.ruff
@@ -87,7 +98,7 @@
             pkgs.bash-language-server
             pkgs.lua-language-server
             pkgs.yaml-language-server
-            (pkgs.clang-tools_21 or pkgs.clang-tools) # clangd + clang-format matching upstream pre-commit pin
+            pkgs.clang-tools # clangd for LSP (indexing, navigation)
           ];
 
           buildTools = [
@@ -183,6 +194,11 @@
               # Report infographic template as a store path, so `qgis-dev
               # report` works from a plain `nix develop`/`nix run` too.
               export QGIS_DEV_REPORT_GNUPLOT="${./lib/report.gnuplot}"
+              # clang-format / clang-tidy at the QGIS pre-commit version (v21),
+              # referenced explicitly so PATH order never resolves the older
+              # toolchain clang-format (FR-Q4).
+              export QGIS_DEV_CLANG_FORMAT="${clangToolsCI}/bin/clang-format"
+              export QGIS_DEV_CLANG_TIDY="${clangToolsCI}/bin/clang-tidy"
               # Point pyright's committed pythonPath at today's interpreter.
               if [ -f CMakeLists.txt ] && [ -d src/core ]; then
                 mkdir -p .dev-env

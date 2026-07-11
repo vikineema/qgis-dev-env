@@ -223,13 +223,111 @@ map('<leader>pP', function()
   task({ 'precommit', '--branch' }, { title = 'pre-commit (branch)', efm = efm_lint })
 end, 'Pre-commit (branch)')
 
+-- Run `qgis-dev fmt` (clang-format v21) on disk, then reload the buffer
+-- preserving cursor/view. Used both by save (touched lines) and the menu.
+local function qgis_format(file, whole, and_then)
+  local args = whole and { 'fmt', '--all', file } or { 'fmt', file }
+  vim.system(
+    vim.list_extend({ 'qgis-dev' }, args),
+    { cwd = root(), text = true },
+    vim.schedule_wrap(function(res)
+      if res.code ~= 0 then
+        notify('format: ' .. ((res.stderr or ''):gsub('%s+$', '')), vim.log.levels.ERROR)
+        return
+      end
+      -- reload the just-formatted file if it's the current buffer
+      if vim.fn.expand('%:p') == file and not vim.bo.modified then
+        local view = vim.fn.winsaveview()
+        vim.cmd('silent! edit')
+        vim.fn.winrestview(view)
+      end
+      if and_then then
+        and_then()
+      end
+    end)
+  )
+end
+
 map('<leader>pf', function()
-  vim.lsp.buf.format({ async = true })
-end, 'Format buffer (LSP)')
+  -- write without firing the save-hook (which formats touched lines only)
+  vim.cmd('silent! noautocmd write')
+  qgis_format(vim.fn.expand('%:p'), true)
+  notify('clang-format: whole file')
+end, 'Format whole file (clang-format)')
+
+-- Naming diagnostics from QGIS's .clang-tidy identifier rules.
+local naming_ns = vim.api.nvim_create_namespace('qgis_naming')
+local function qgis_naming(file, bufnr)
+  vim.system(
+    { 'qgis-dev', 'naming', file },
+    { cwd = root(), text = true },
+    vim.schedule_wrap(function(res)
+      if not vim.api.nvim_buf_is_valid(bufnr) then
+        return
+      end
+      local diags = {}
+      for _, line in ipairs(vim.split(res.stdout or '', '\n', { trimempty = true })) do
+        local l, c, sev, msg = line:match(':(%d+):(%d+): (%w+): (.+)$')
+        if l then
+          table.insert(diags, {
+            lnum = tonumber(l) - 1,
+            col = tonumber(c) - 1,
+            severity = (sev == 'error') and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.WARN,
+            message = msg,
+            source = 'qgis-naming',
+          })
+        end
+      end
+      vim.diagnostic.set(naming_ns, bufnr, diags, {})
+      if #diags > 0 then
+        notify(('%d naming issue(s) — see diagnostics'):format(#diags), vim.log.levels.WARN)
+      end
+    end)
+  )
+end
+
+map('<leader>pn', function()
+  notify('checking identifier naming …')
+  qgis_naming(vim.fn.expand('%:p'), vim.api.nvim_get_current_buf())
+end, 'Naming check (clang-tidy)')
 
 map('<leader>pl', function()
   task({ 'tidy', vim.fn.expand('%:p') }, { title = 'clang-tidy', efm = efm_build, qf_on_success = true })
 end, 'Lint file (clang-tidy)')
+
+-- Format ONLY touched lines on save (QGIS clang-format v21). We disable
+-- conform/LSP whole-file autoformat for these buffers so they don't fight
+-- and rewrite lines you never touched with a different clang-format version.
+-- A single BufWritePost (not one-per-buffer) avoids duplicate hooks on reload.
+local fmt_grp = vim.api.nvim_create_augroup('qgis_format_on_save', { clear = true })
+vim.api.nvim_create_autocmd('FileType', {
+  group = fmt_grp,
+  pattern = { 'c', 'cpp' },
+  callback = function(ev)
+    if vim.fs.root(ev.buf, { 'CMakeLists.txt', 'src' }) then
+      vim.b[ev.buf].disable_autoformat = true -- opt out of conform's on-save
+    end
+  end,
+})
+vim.api.nvim_create_autocmd('BufWritePost', {
+  group = fmt_grp,
+  pattern = { '*.c', '*.cc', '*.cxx', '*.cpp', '*.h', '*.hpp' },
+  callback = function(w)
+    if vim.g.qgis_format_on_save == false then
+      return
+    end
+    local ft = vim.bo[w.buf].filetype
+    if (ft ~= 'c' and ft ~= 'cpp') or not vim.fs.root(w.buf, { 'CMakeLists.txt', 'src' }) then
+      return
+    end
+    local file = vim.api.nvim_buf_get_name(w.buf)
+    qgis_format(file, false, function()
+      if vim.g.qgis_naming_on_save then
+        qgis_naming(file, w.buf)
+      end
+    end)
+  end,
+})
 
 map('<leader>pg', function()
   task({ 'tags' })

@@ -34,8 +34,18 @@ versioning: [SemVer](https://semver.org/).
   context-aware: resolves a source file's `.ui` from its `ui_<name>.h`
   include (FR-E10).
 
+- **Format-on-save (touched lines only)** with clang-format at the QGIS
+  pin (**v21**), plus manual whole-file format (`<leader>pf`) and naming
+  checks (`<leader>pn`, clang-tidy `readability-identifier-naming`).
+  `qgis-dev fmt [--all]` / `qgis-dev naming` (FR-Q4/Q6/Q7).
+
 ### Fixed
 
+- **Formatter version mismatch**: the editor was reformatting whole files
+  with the toolchain's clang-format 19 while QGIS CI enforces 21, churning
+  already-compliant lines. clang-format/clang-tidy now come from a
+  dedicated v21 pin, invoked by explicit path; nix-vim's whole-file
+  autoformat is disabled for C/C++ so it no longer fights.
 - Bootstrap excludes `.cache/` (clangd background index) from git, so the
   editor index never dirties the pristine checkout.
 

@@ -34,6 +34,7 @@ menu is discoverable — press `<leader>p` and read:
 | `<leader>pr` / `pu` | Run QGIS (throwaway profile) · open this file's `.ui` in Qt Designer |
 | `<leader>pt` / `pT` | ctest all / test for the current file |
 | `<leader>pp` / `pP` | Pre-commit on changed files / on the branch diff |
+| save / `<leader>pf` / `pn` | Auto-format touched lines · format whole file · naming check |
 | `<leader>pd` / `pD` | Build / serve the QGIS API docs |
 | `<leader>pw…` | Worktrees: new, switch, dashboard, remove, prune |
 | `<leader>pa…` | Analyse: sanitizers, valgrind, heaptrack, perf, GammaRay, cppcheck |

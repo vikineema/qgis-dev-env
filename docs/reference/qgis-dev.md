@@ -35,6 +35,8 @@ Neovim menu. Run from anywhere inside a QGIS checkout or worktree.
 |---|---|
 | `qgis-dev docs` / `docs-serve` | Build / serve the QGIS API (Doxygen) docs |
 | `qgis-dev precommit [--branch]` | Upstream pre-commit hooks over changed files / branch diff |
+| `qgis-dev fmt [--all] <file>` | clang-format at the QGIS pin (v21) — **touched lines only** by default (vs `HEAD`), or the whole file with `--all` |
+| `qgis-dev naming <file>` | QGIS identifier-naming check (clang-tidy `readability-identifier-naming`) → `file:line:col` warnings |
 | `qgis-dev tidy <file>` | clang-tidy one file against `build/compile_commands.json` |
 | `qgis-dev tags` | Regenerate supplementary ctags (SIP, CMake, shell) |
 

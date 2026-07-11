@@ -26,7 +26,8 @@ label, runs asynchronously, and reports failures to the quickfix list.
 | `<leader>pD` | Docs serve | serve built API docs |
 | `<leader>pp` | Pre-commit (changed) | hooks on changed files → quickfix |
 | `<leader>pP` | Pre-commit (branch) | hooks on diff vs `origin/master` |
-| `<leader>pf` | Format buffer | LSP formatting (clang-format / ruff) |
+| `<leader>pf` | Format whole file | clang-format v21 over the entire file (save auto-formats touched lines only) |
+| `<leader>pn` | Naming check | QGIS identifier-naming (clang-tidy) → diagnostics |
 | `<leader>pl` | Lint file | clang-tidy on current file → quickfix |
 | `<leader>pg` | Refresh tags | regenerate ctags supplement |
 | `<leader>ps` | ccache stats | statistics window |

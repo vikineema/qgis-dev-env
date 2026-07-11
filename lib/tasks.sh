@@ -489,9 +489,69 @@ cmd_precommit() {
 
 cmd_tidy() {
   local f="${1:?usage: qgis-dev tidy <file>}"
-  command -v clang-tidy >/dev/null || die "clang-tidy not available (enter the devshell)"
+  local ct="${QGIS_DEV_CLANG_TIDY:-clang-tidy}"
+  command -v "$ct" >/dev/null 2>&1 || [[ -x "$ct" ]] || die "clang-tidy not available (enter the devshell)"
   [[ -f "$BUILD/compile_commands.json" ]] || die "no compile_commands.json — run 'qgis-dev configure'"
-  clang-tidy -p "$BUILD" "$f"
+  "$ct" -p "$BUILD" "$f"
+}
+
+# clang-format at the QGIS pre-commit version (FR-Q4). Default: only the
+# lines changed vs HEAD (minimal, reviewer-friendly diffs). --all: whole file.
+cmd_fmt() {
+  local all=0 f="" a
+  for a in "$@"; do
+    case "$a" in
+    --all) all=1 ;;
+    *) f="$a" ;;
+    esac
+  done
+  [[ -n "$f" && -f "$f" ]] || die "usage: qgis-dev fmt [--all] <file>"
+  case "$f" in
+  *.cpp | *.cc | *.cxx | *.c | *.h | *.hpp) ;;
+  *) return 0 ;; # not a C/C++ file — nothing to do
+  esac
+  local cf="${QGIS_DEV_CLANG_FORMAT:-clang-format}"
+  command -v "$cf" >/dev/null 2>&1 || [[ -x "$cf" ]] || die "clang-format not available (enter the devshell)"
+
+  if [[ "$all" -eq 1 ]] || ! git -C "$ROOT" ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
+    "$cf" -i --style=file "$f"
+    if [[ "$all" -eq 1 ]]; then
+      note "clang-format (whole file): $(basename "$f")"
+    else
+      note "clang-format (new file): $(basename "$f")"
+    fi
+    return 0
+  fi
+
+  # Touched-line ranges from the +side of the diff vs HEAD (staged+unstaged).
+  local -a ranges=()
+  local h start len
+  while IFS= read -r h; do
+    [[ "$h" =~ \+([0-9]+)(,([0-9]+))? ]] || continue
+    start="${BASH_REMATCH[1]}"
+    len="${BASH_REMATCH[3]:-1}"
+    [[ "$len" -eq 0 ]] && continue # pure deletion — no lines to format
+    ranges+=(--lines="$start:$((start + len - 1))")
+  done < <(git -C "$ROOT" diff -U0 --no-color HEAD -- "$f" 2>/dev/null | grep '^@@')
+
+  if [[ "${#ranges[@]}" -eq 0 ]]; then
+    note "no changed lines in $(basename "$f")"
+    return 0
+  fi
+  "$cf" -i --style=file "${ranges[@]}" "$f"
+  note "clang-format (${#ranges[@]} touched range(s)): $(basename "$f")"
+}
+
+# Variable/identifier naming per QGIS's .clang-tidy (readability-identifier-
+# naming). Prints file:line:col: warning lines for the editor to consume.
+cmd_naming() {
+  local f="${1:?usage: qgis-dev naming <file>}"
+  [[ -f "$f" ]] || die "no such file: $f"
+  local ct="${QGIS_DEV_CLANG_TIDY:-clang-tidy}"
+  command -v "$ct" >/dev/null 2>&1 || [[ -x "$ct" ]] || die "clang-tidy not available (enter the devshell)"
+  [[ -f "$BUILD/compile_commands.json" ]] || die "no compile_commands.json — run 'qgis-dev configure'"
+  "$ct" -p "$BUILD" --checks='-*,readability-identifier-naming' --quiet "$f" 2>/dev/null |
+    grep -E ':[0-9]+:[0-9]+: (warning|error):' || true
 }
 
 cmd_tags() {
@@ -789,6 +849,8 @@ qgis-dev — QGIS developer tasks (shared by `nix run .#<task>` and Neovim)
   test-file <path>           run the test matching a source file
   docs | docs-serve          build / serve the API docs
   precommit [--branch]       QGIS pre-commit hooks on changed files (or branch diff)
+  fmt [--all] <file>         clang-format (v21) — touched lines, or whole file
+  naming <file>              QGIS identifier-naming check (clang-tidy) → warnings
   tidy <file>                clang-tidy one file
   tags                       regenerate supplementary ctags (SIP/CMake/shell)
   flags | targets            list cmake cache flags / ninja targets
@@ -869,6 +931,14 @@ precommit)
 tidy)
   init
   cmd_tidy "$@"
+  ;;
+fmt)
+  init
+  cmd_fmt "$@"
+  ;;
+naming)
+  init
+  cmd_naming "$@"
   ;;
 tags)
   init
