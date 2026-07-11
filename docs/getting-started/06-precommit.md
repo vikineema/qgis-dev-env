@@ -79,9 +79,15 @@ Turn the save behaviour off per session with `:lua vim.g.qgis_format_on_save
 ### Variable naming
 
 QGIS's `.clang-tidy` defines the identifier rules (members `camelBack`,
-static members `s`-prefixed, enums `CamelCase`, constants `UPPER_CASE`, …).
-`<leader>pn` runs `qgis-dev naming` and surfaces violations as diagnostics
-on the offending lines. Naming is **reported, not auto-renamed** — renaming
+enums `CamelCase`, constants `UPPER_CASE`, …), and **clangd surfaces them
+live** as you type. One correction the overlay makes: QGIS's `.clang-tidy`
+demands static members be `sCamelCase`, but QGIS's own static *settings*
+entries are camelBack (`settingsShowInstallFromZipWarning`), so the raw
+rule flags QGIS's own compliant code on nearly every such line. The overlay
+`.clangd` (and `qgis-dev naming`) relax `ClassMemberCase` to **camelBack**
+with no forced prefix — genuine violations (a leading-uppercase name) are
+still caught. `<leader>pn` runs a full-file check and surfaces violations as
+diagnostics on the offending lines. Naming is **reported, not auto-renamed** — renaming
 a symbol safely means touching every use of it, which is your call to make,
 not a silent save-time rewrite. (Enable naming checks on every save with
 `:lua vim.g.qgis_naming_on_save = true` if you want them nagging live —

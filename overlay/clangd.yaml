@@ -11,6 +11,17 @@ CompileFlags:
     - -mno-direct-extern-access
 Index:
   Background: Build
+Diagnostics:
+  ClangTidy:
+    # QGIS's .clang-tidy sets ClassMemberCase (static members) to CamelCase
+    # with an `s` prefix, but QGIS's own static "settings" entries use
+    # camelBack (leading lowercase, e.g. `settingsShowInstallFromZipWarning`).
+    # That mismatch makes clangd flag QGIS's own compliant members. Accept
+    # camelBack for static members (no forced prefix) to match real QGIS
+    # convention. Local editor tweak only — upstream .clang-tidy untouched.
+    CheckOptions:
+      readability-identifier-naming.ClassMemberCase: camelBack
+      readability-identifier-naming.ClassMemberPrefix: ""
 ---
 # Generated code (moc/uic/SIP output under build/) — parse, don't nag.
 If:

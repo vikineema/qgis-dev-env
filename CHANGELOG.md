@@ -41,6 +41,12 @@ versioning: [SemVer](https://semver.org/).
 
 ### Fixed
 
+- **Naming false positives**: clangd flagged QGIS's own camelBack static
+  `settings*` members because QGIS's `.clang-tidy` demands `sCamelCase` for
+  static members. The overlay `.clangd` and `qgis-dev naming` now relax
+  `ClassMemberCase` to camelBack (merging via clangd CheckOptions /
+  clang-tidy `InheritParentConfig`), so compliant code isn't flagged while
+  genuine violations still are.
 - **Formatter version mismatch**: the editor was reformatting whole files
   with the toolchain's clang-format 19 while QGIS CI enforces 21, churning
   already-compliant lines. clang-format/clang-tidy now come from a

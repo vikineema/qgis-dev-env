@@ -550,7 +550,13 @@ cmd_naming() {
   local ct="${QGIS_DEV_CLANG_TIDY:-clang-tidy}"
   command -v "$ct" >/dev/null 2>&1 || [[ -x "$ct" ]] || die "clang-tidy not available (enter the devshell)"
   [[ -f "$BUILD/compile_commands.json" ]] || die "no compile_commands.json — run 'qgis-dev configure'"
-  "$ct" -p "$BUILD" --checks='-*,readability-identifier-naming' --quiet "$f" 2>/dev/null |
+  # Inherit the tree's .clang-tidy but relax ClassMemberCase to camelBack —
+  # QGIS's static "settings" members are camelBack, not sCamelCase, so the
+  # upstream rule flags QGIS's own compliant code. InheritParentConfig merges
+  # (not replaces), so all other naming rules still apply. Mirrors .clangd.
+  local cfg='{InheritParentConfig: true, CheckOptions: {readability-identifier-naming.ClassMemberCase: camelBack, readability-identifier-naming.ClassMemberPrefix: ""}}'
+  "$ct" -p "$BUILD" --checks='-*,readability-identifier-naming' \
+    --config="$cfg" --quiet "$f" 2>/dev/null |
     grep -E ':[0-9]+:[0-9]+: (warning|error):' || true
 }
 

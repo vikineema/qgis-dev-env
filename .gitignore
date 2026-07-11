@@ -8,3 +8,6 @@ claude.out
 git.sh
 site/
 *.pdf
+
+# local screenshots for issue reports
+screenshots-gitignore/
