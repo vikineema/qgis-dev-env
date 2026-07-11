@@ -400,6 +400,40 @@ cmd_run() {
   "$bin" --profiles-path "$STATE" "$@"
 }
 
+cmd_designer() {
+  command -v designer >/dev/null || die "Qt Designer not available (enter the devshell)"
+  local arg="${1:-}" uifile="" f base hdr uibase b
+  if [[ "$arg" == *.ui && -f "$arg" ]]; then
+    uifile="$arg"
+  elif [[ -n "$arg" && -f "$arg" ]]; then
+    # QGIS links a dialog to its .ui via an `#include "ui_<name>.h"` — often
+    # in the paired header, so scan the file and its .cpp/.h counterpart.
+    base="${arg%.*}"
+    for f in "$arg" "${base}.h" "${base}.cpp"; do
+      [[ -f "$f" ]] || continue
+      hdr="$(grep -hoE 'ui_[a-zA-Z0-9_]+\.h' "$f" | head -1 || true)"
+      if [[ -n "$hdr" ]]; then
+        uibase="${hdr#ui_}"
+        uibase="${uibase%.h}"
+        uifile="$(find "$ROOT/src" -name "${uibase}.ui" 2>/dev/null | head -1)"
+        [[ -n "$uifile" ]] && break
+      fi
+    done
+    if [[ -z "$uifile" ]]; then # basename fallback (…base.ui or ….ui)
+      b="$(basename "$base")"
+      uifile="$(find "$ROOT/src" \( -iname "${b}base.ui" -o -iname "${b}.ui" \) 2>/dev/null | head -1)"
+    fi
+  fi
+  if [[ -n "$uifile" && -f "$uifile" ]]; then
+    note "Qt Designer: $uifile"
+    setsid designer "$uifile" >/dev/null 2>&1 </dev/null &
+  else
+    [[ -n "$arg" ]] && note "no .ui found for $(basename "$arg") — launching Qt Designer"
+    setsid designer >/dev/null 2>&1 </dev/null &
+  fi
+  disown 2>/dev/null || true
+}
+
 cmd_test() {
   [[ -f "$BUILD/build.ninja" ]] || die "not configured — run 'qgis-dev configure' first"
   (cd "$BUILD" && QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" ctest --output-on-failure "$@")
@@ -749,6 +783,8 @@ qgis-dev — QGIS developer tasks (shared by `nix run .#<task>` and Neovim)
   relink                     clear linked outputs + reconfigure (objects kept)
   debugprep                  self-heal + print the binary path (used by nvim DAP)
   run [args…]                launch built QGIS with an isolated profile
+  designer [file]            open Qt Designer (non-blocking); resolves the
+                             .ui for a source file when given one
   test [ctest args…]         run ctest (offscreen)
   test-file <path>           run the test matching a source file
   docs | docs-serve          build / serve the API docs
@@ -805,6 +841,10 @@ debugprep)
 run)
   init
   cmd_run "$@"
+  ;;
+designer)
+  init
+  cmd_designer "$@"
   ;;
 test)
   init

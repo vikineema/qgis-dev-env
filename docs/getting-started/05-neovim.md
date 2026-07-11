@@ -31,7 +31,7 @@ menu is discoverable — press `<leader>p` and read:
 |------|--------|
 | `<leader>pb` / `pB` | Build all / pick a Ninja target |
 | `<leader>pc` / `pk` / `px` | Configure · toggle CMake flags · switch build profile |
-| `<leader>pr` | Run QGIS (throwaway profile) |
+| `<leader>pr` / `pu` | Run QGIS (throwaway profile) · open this file's `.ui` in Qt Designer |
 | `<leader>pt` / `pT` | ctest all / test for the current file |
 | `<leader>pp` / `pP` | Pre-commit on changed files / on the branch diff |
 | `<leader>pd` / `pD` | Build / serve the QGIS API docs |

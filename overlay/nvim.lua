@@ -190,6 +190,11 @@ map('<leader>pr', function()
   detached({ 'run' }, 'QGIS launched (isolated throwaway profile)')
 end, 'Run QGIS')
 
+map('<leader>pu', function()
+  local f = vim.fn.expand('%:p')
+  detached({ 'designer', f }, 'Qt Designer opening (.ui for ' .. vim.fn.expand('%:t') .. ')')
+end, 'Qt Designer (this file’s .ui)')
+
 map('<leader>pt', function()
   task({ 'test' }, { title = 'ctest' })
 end, 'Test (ctest)')

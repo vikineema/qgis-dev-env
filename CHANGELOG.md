@@ -29,6 +29,10 @@ versioning: [SemVer](https://semver.org/).
   (11th UML diagram) — breakpoints, stepping, inspection, attach.
 - **FAQ** page (why Neovim not Qt Creator, first-download, incremental
   builds, clangd index location/reuse, what keeps you waiting).
+- **Qt Designer** provisioned (`qt6.qttools`) and launchable non-blocking
+  via `qgis-dev designer` / `nix run .#designer` / `<leader>pu` —
+  context-aware: resolves a source file's `.ui` from its `ui_<name>.h`
+  include (FR-E10).
 
 ### Fixed
 
