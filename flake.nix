@@ -44,6 +44,7 @@
         "clean"
         "run"
         "designer"
+        "qtcreator"
         "test"
         "docs"
         "docs-serve"
@@ -81,6 +82,7 @@
             [
               p.pyqt6
               p.qscintilla-qt6
+              p.nose2 # required by processing/tests/ProcessingGeneralTest.py
             ]
             ++ lib.optionals (p ? pyqt6-stubs) [ p.pyqt6-stubs ]
           );
@@ -145,6 +147,11 @@
             nix-vim.packages.${system}.default
           ];
 
+          # Qt Creator: optional full-IDE alternative (FR-K4). CMakePresets.json
+          # (overlay-owned) gives it the same build/ tree + ccache as the CLI
+          # and Neovim with no manual kit setup. Guarded: absent on some pins.
+          qtCreator = lib.optionals (pkgs ? qtcreator) [ pkgs.qtcreator ];
+
           # mkdocs stack for the developer handbook (FR-D4) — mirrors the
           # kartoza/InfrastructureMapper documentation toolchain.
           docsPython = pkgs.python3.withPackages (ps: [
@@ -169,6 +176,7 @@
               devPython
             ]
             ++ editor
+            ++ qtCreator
             ++ lspServers
             ++ buildTools
             ++ qaTools

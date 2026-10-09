@@ -268,7 +268,7 @@ Priorities: **M**ust, **S**hould, **C**ould (MoSCoW).
 |----|-----|-------------|
 | FR-I1 | M | All overlay artefacts live in a standalone git repo `qgis-dev-env`, hosted on GitHub (`github.com/timlinux/qgis-dev-env`; may later move to the Kartoza organisation), cloneable by colleagues. |
 | FR-I2 | M | A bootstrap command (`./bootstrap.sh <qgis-checkout>` and `nix run .#bootstrap`) symlinks overlay files into the checkout and **idempotently** appends each symlink name to `<checkout>/.git/info/exclude`. Running it twice produces no duplicates and no errors. |
-| FR-I3 | M | Overlay files placed in the checkout are limited to: the embedded `qgis-dev-env/` clone, `.envrc`, `.nvim.lua`, `.exrc`, `.clangd`, `pyrightconfig.json`, `.luarc.json`, `PROMPT.log`, `.dev-env` (state dir), and tool caches (`.cache/`, `.direnv/`). All are registered in `.git/info/exclude`; no tracked upstream file is modified. This SRS itself lives **only** in the sidecar (`SPECIFICATION.md`), not at the checkout root. |
+| FR-I3 | M | Overlay files placed in the checkout are limited to: the embedded `qgis-dev-env/` clone, `.envrc`, `.nvim.lua`, `.exrc`, `.clangd`, `pyrightconfig.json`, `.luarc.json`, `CMakePresets.json` (FR-K1), `PROMPT.log`, `.dev-env` (state dir — includes Qt Creator's isolated settings, FR-K3), and tool caches (`.cache/`, `.direnv/`). All are registered in `.git/info/exclude`, alongside the IDE-generated `CMakeUserPresets.json` and `CMakeLists.txt.user*` (FR-K3). No tracked upstream file is modified. This SRS itself lives **only** in the sidecar (`SPECIFICATION.md`), not at the checkout root. |
 | FR-I4 | M | A guard verifies isolation: `nix run .#doctor` (and `<leader>pv` in Neovim) runs `git -C <checkout> status --porcelain` and fails loudly if any overlay artefact is visible to upstream git. |
 | FR-I5 | M | An **anti-leak pre-push guard**: bootstrap installs a `pre-push` hook *only if the checkout has none*, refusing to push any commit that adds an overlay-owned path; if upstream ever ships hooks, the guard is layered via `core.hooksPath` chaining instead. The hook itself lives in `qgis-dev-env` and is symlinked. |
 | FR-I6 | M | `bootstrap.sh --remove` cleanly unlinks everything and strips the exclude entries, restoring a pristine checkout. |
@@ -282,7 +282,7 @@ Priorities: **M**ust, **S**hould, **C**ould (MoSCoW).
 | FR-N1 | M | `qgis-dev-env/flake.nix` exposes `devShells.default` composed with `inputsFrom` the upstream QGIS package/devshell (consuming upstream's `nix/package.nix` via a non-flake input pinned in `flake.lock`), so **every library QGIS links against is available for compilation and for clangd**. |
 | FR-N2 | M | The devshell adds, from nixpkgs: `ccache`, `clang-tools` (clangd, clang-format matching upstream's pinned major version, clang-tidy), `mold`, `ninja`, `cmake`, `gdb`, `basedpyright` (or `pyright`), `ruff`, `neocmakelsp`, `nixd`, `nil` or equivalent, `bash-language-server`, `shellcheck`, `universal-ctags`, `doxygen`, `graphviz`, `pre-commit`, `codespell`/`aspell` (as required by upstream spell-check hook), `bats` (tests), `gitleaks`, `reuse`; and for group G: `valgrind`, `heaptrack`, `massif-visualizer`, `hotspot`, `linuxPackages.perf`, `qcachegrind`, `cppcheck` (GammaRay per FR-G7). |
 | FR-N3 | M | `.envrc` (symlinked) activates the overlay devshell via `nix-direnv` (`use flake <resolved qgis-dev-env path>`), so entering the directory in a terminal **or** spawning Neovim gets the full toolchain with no manual `nix develop`. |
-| FR-N4 | M | The flake exposes `nix run .#<task>` apps mirroring the Neovim menu: `configure`, `build`, `clean`, `test`, `run`, `docs`, `precommit`, `tags`, `doctor`, `bootstrap`, `ccache-stats`, `worktree`, `qa` (memcheck/heaptrack/perf/…). Terminal and editor are always at feature parity. |
+| FR-N4 | M | The flake exposes `nix run .#<task>` apps mirroring the Neovim menu: `configure`, `build`, `clean`, `test`, `run`, `designer`, `qtcreator` (FR-K2), `docs`, `precommit`, `tags`, `doctor`, `bootstrap`, `ccache-stats`, `worktree`, `qa` (memcheck/heaptrack/perf/…). Terminal and editor are always at feature parity. |
 | FR-N5 | M | `flake.lock` is committed; `nix flake check` builds the devshell and runs the repo's own test suite; GitHub Actions runs the same check on every PR. |
 | FR-N6 | S | The overlay's nixpkgs input follows the upstream QGIS flake's pin where practical, so library versions match what upstream CI uses. |
 | FR-N7 | C | Optional shared binary cache (Cachix or Kartoza-hosted) for the devshell closure so colleagues' first `direnv allow` is fast. |
@@ -403,6 +403,21 @@ evidence — using the right tool for each job, all provisioned from nixpkgs.
 | FR-T2 | M | `nix flake check` validates devshell evaluation and runs FR-T1; GitHub Actions executes it on PRs to the overlay repo. |
 | FR-T3 | S | A smoke test that configures + compiles one small QGIS target (e.g. a single test binary) inside the devshell to prove the toolchain end-to-end (may be a manual/nightly job given cost). |
 
+### 3.11 Qt Creator — alternative editor (group K)
+
+Neovim (group E) remains the supported, zero-setup default (see the FAQ).
+This group makes Qt Creator a **scripted first-class option** instead of a
+purely manual one, for GUI-heavy work and the visual designer.
+
+| ID | Pri | Requirement |
+|----|-----|-------------|
+| FR-K1 | M | An overlay-owned `CMakePresets.json` (symlinked by bootstrap, FR-I3) defines one **hidden** preset per build profile (FR-B6: `qgis-debug`, `qgis-release`, `qgis-minimal`, `qgis-asan-ubsan`), each with `binaryDir` set to the **same `build/` tree** the CLI and Neovim use and the same ccache launchers (FR-B1). Hidden means these never appear in a preset picker (they remain selectable by name, e.g. `cmake --preset=qgis-release`) — they exist purely as the named base that FR-K2's generated preset points at, so the two never drift out of sync with the profile files. |
+| FR-K2 | M | `qgis-dev qtcreator [args…]` (and `nix run .#qtcreator`, `<leader>pQ`) **configures `build/` for real first** (`cmd_configure`, same code path `qgis-dev build` uses — skipped if already configured) and writes `CMakeUserPresets.json` with **exactly one visible preset** (`qgis-dev-active`, pointing at the now-configured `build/` with no cache variables of its own — the real flags already live in `CMakeCache.txt`), then launches Qt Creator **from inside the devshell** (pinned clangd/clang-format/clang-tidy/cmake/ninja on `PATH`, FR-N2) on the checkout's `CMakeLists.txt`, non-blocking — mirrors `cmd_designer`'s detached-launch pattern (FR-E10). Because exactly one preset is visible, Qt Creator auto-selects it instead of showing a picker — **no kit wizard, no preset choice, no "configure the project" step**: Build and Run work the moment the window opens. `CMakeUserPresets.json` is regenerated (and excluded from git, FR-K3) on every launch, so it always reflects whatever profile is currently active (`qgis-dev profile <name>`). |
+| FR-K3 | M | **Isolated IDE settings**: the launcher passes `-settingspath <checkout>/.dev-env/qtcreator`, so Qt Creator's preferences (clangd executable, enabled plugins, session state) live under the per-checkout state dir and the developer's real Qt Creator profile is never touched — mirrors the isolated QGIS run profile (FR-E5). Qt Creator's own per-project file (`CMakeLists.txt.user*`) and `CMakeUserPresets.json` are registered in `.git/info/exclude` the same way as every other overlay artefact (group I); `doctor`'s leak regex covers them. |
+| FR-K4 | S | Qt Creator is provisioned in the devshell from nixpkgs when available (`pkgs.qtcreator`), guarded (`lib.optionals`) so flake evaluation still succeeds on a pin where the package is absent — colleagues who prefer it get a flake-pinned version rather than a system install. |
+| FR-K5 | S | One-time, **documented but not scripted** Qt Creator preferences (Options → C++ → Code Model: enable Clangd and point it at the devshell's `clangd`; enable the ClangFormat and Clang-Tools plugins) bring code completion, formatting and linting to parity with the Neovim setup (FR-L1/L2/Q7) — these live in Qt Creator's own settings store, which FR-K3's isolation keeps out of the tracked checkout, and there is no stable, version-independent on-disk format to safely template them into. This is strictly about completion/lint quality, not about whether the project compiles and runs (FR-K2 covers that fully). |
+| FR-K6 | S | The one remaining per-project pick: QGIS's `CMakeLists.txt` defines many executable targets (the app, test binaries), so Qt Creator's run-target dropdown has no single obvious default. The developer selects `qgis` from it once; Qt Creator persists that choice in `CMakeLists.txt.user` (excluded from git, FR-K3) for the lifetime of the checkout — not a kit/toolchain/build setting, and not repeated across sessions. |
+
 ---
 
 ## 4. Non-functional requirements
@@ -447,6 +462,7 @@ that initial build. Everything below elaborates those two.
 | A17 | `<leader>pac` on a short QGIS session, then `<leader>pal` | Flamegraph opens in hotspot; artefact listed and re-openable from the diagnostics archive | FR-G5, G9 |
 | A18 | Two consecutive builds, then `<leader>pG` | Both appear in `build-log.tsv` with duration + ccache hit rate; trend sparkline renders; `stats --graph` writes an SVG | FR-B13 |
 | A19 | `<leader>pe` on, run a build while watching `powerprofilesctl get` | Profile switches to performance during the build and restores afterwards; toggling off stops the behaviour | FR-B12 |
+| A20 | `qgis-dev qtcreator` (or `<leader>pQ`) on a checkout already built via the CLI | Qt Creator opens directly into the configured `build/` tree — no kit wizard, no preset picker; Build (Ctrl+B) succeeds immediately with ccache hits, not a cold build; `git status` stays clean (`CMakeLists.txt.user`/`CMakeUserPresets.json` excluded) | FR-K1–K3 |
 
 ---
 
@@ -499,6 +515,24 @@ Recorded here so reviewers can veto them explicitly:
 14. **Diagnostics archive** (FR-G9) — profiler/leak evidence is exactly what
     upstream bug reports want attached; keeping timestamped artefacts in
     `.dev-env/diagnostics/` turns "I saw it leak yesterday" into a file.
+15. **Qt Creator via a single generated, pre-configured preset, not a
+    scripted global config** (group K) — "just compile and run, no kit
+    wizard" meant the build side had to be genuinely zero-choice, not merely
+    "fewer manual steps". A static multi-preset `CMakePresets.json` would
+    still show Qt Creator's own preset picker (one click too many); instead
+    `qgis-dev qtcreator` configures `build/` for real first (reusing
+    `cmd_configure`, FR-K2) and writes a single generated preset that just
+    points at it — nothing left for Qt Creator to ask. The four *named*
+    profile presets stay in the committed `CMakePresets.json`, `hidden` so
+    they never compete with the generated one, kept purely as the base the
+    generated preset would drift from if hand-duplicated. The *IDE
+    preference* half (clangd backend, plugin toggles, FR-K5) is a separate
+    concern — code-intelligence quality, not compile/run — and lives in an
+    undocumented, version-drifting settings store we can't safely template;
+    `-settingspath` contains that one remaining manual step to a
+    per-checkout directory instead of either leaving it untouched (worse UX)
+    or mutating the developer's real profile (worse trust) — the same
+    trade-off FR-E5 already made for the QGIS run profile.
 
 ### Explicitly rejected (for now)
 

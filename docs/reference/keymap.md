@@ -20,6 +20,7 @@ label, runs asynchronously, and reports failures to the quickfix list.
 | `<leader>pC` | Clean | `ninja clean` (confirm prompt) |
 | `<leader>pr` | Run QGIS | launch built binary, throwaway profile |
 | `<leader>pu` | Qt Designer | open the `.ui` associated with the current source (non-blocking) |
+| `<leader>pQ` | Qt Creator | open the alternative IDE on this checkout (non-blocking, isolated settings) |
 | `<leader>pt` | Test (ctest) | full test run → quickfix |
 | `<leader>pT` | Test this file | ctest matching current buffer |
 | `<leader>pd` | Docs (apidoc) | Doxygen build → warnings in quickfix |

@@ -13,6 +13,21 @@ versioning: [SemVer](https://semver.org/).
 
 ### Added
 
+- **Qt Creator as a scripted alternative editor** (FR-K1–K6): `qgis-dev
+  qtcreator` / `nix run .#qtcreator` / `<leader>pQ` configures `build/` for
+  real first (same code path as `qgis-dev build`), generates a single CMake
+  preset pointing at the now-configured tree, then launches Qt Creator from
+  inside the devshell with an isolated settings path (`.dev-env/qtcreator`).
+  No kit wizard, no preset picker — Build/Run work the moment the window
+  opens, against the same `build/` tree and ccache the CLI and Neovim use.
+  The four named build profiles live as hidden base presets in the
+  overlay-owned `CMakePresets.json` so they never drift from `profiles/*`.
+  `qtcreator` is provisioned in the devshell from nixpkgs when available.
+  Editor font is pre-set larger via Qt Creator's own `[FontSettings]` store
+  (seeded once, so a later change via Options → Text Editor → Fonts & Color
+  sticks) — override the seeded size with `QGIS_DEV_QTCREATOR_FONT_SIZE`.
+  Chrome (menus/toolbars/sidebar) font is outside Qt Creator's settings and
+  isn't covered.
 - **`qgis-dev report`**: branded multi-panel build-performance infographic
   (PDF/SVG/PNG) — log-scaled duration trend, ccache hit-rate area,
   average duration per profile, summary band. `nix run .#report`,
@@ -41,6 +56,11 @@ versioning: [SemVer](https://semver.org/).
 
 ### Fixed
 
+- **`qgis-dev test` missing `nose2`**: `ProcessingGeneralTest` failed with
+  `ModuleNotFoundError: No module named 'nose2'` because the devshell's
+  Python only carried `pyqt6`/`qscintilla-qt6`. `devPython` now also
+  provisions `nose2`, which `processing/tests/ProcessingGeneralTest.py`
+  imports directly.
 - **Naming false positives**: clangd flagged QGIS's own camelBack static
   `settings*` members because QGIS's `.clang-tidy` demands `sCamelCase` for
   static members. The overlay `.clangd` and `qgis-dev naming` now relax

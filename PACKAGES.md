@@ -51,6 +51,7 @@ sourced from nixpkgs, pinned by `flake.lock` — no pip, no npm (SRS C3).
 | Package | Why |
 |---|---|
 | `nix-vim` (flake input, [timlinux/nix-vim](https://github.com/timlinux/nix-vim)) | The standard, fully configured team Neovim — `nvim` inside the devshell (FR-N8) |
+| `qtcreator` (optional — included when present in the pin) | Scripted alternative IDE: `qgis-dev qtcreator` opens the same `build/` tree via `CMakePresets.json`, with isolated IDE settings (FR-K1–K4) |
 
 ## Documentation toolchain
 

@@ -26,8 +26,20 @@ Neovim menu. Run from anywhere inside a QGIS checkout or worktree.
 |---|---|
 | `qgis-dev run [args…]` | Launch the built QGIS with an isolated throwaway profile; self-heals the build-tree marker and Python staging, launches bare (no `QGIS_PREFIX_PATH`) |
 | `qgis-dev designer [file]` | Open Qt Designer, non-blocking. Given a source file, resolves and opens its associated `.ui` (via the `ui_<name>.h` include, checking the paired header); given a `.ui`, opens it; otherwise launches Designer empty |
+| `qgis-dev qtcreator [args…]` | Configure `build/` for real, generate a single CMake preset pointing at it, then open Qt Creator on this checkout — non-blocking, isolated settings path (`.dev-env/qtcreator`). No kit wizard, no preset picker: Build/Run work immediately. Editor font is pre-set larger via Qt Creator's own `[FontSettings]` (seeded once — override with `QGIS_DEV_QTCREATOR_FONT_SIZE` before the first launch; later changes via Options → Text Editor → Fonts & Color stick). Code completion/format/lint parity with Neovim is a one-time manual step, not automatic — see the [FAQ](../about/faq.md) |
 | `qgis-dev test [ctest args…]` | `ctest --output-on-failure` (offscreen platform) |
 | `qgis-dev test-file <path>` | Run the test matching a source file's name |
+
+> **Known hang: `test_core_authmanager` / `testPasswordHelper`.** This test
+> calls `QgsAuthManager::passwordHelperSync`, which blocks on a D-Bus Secret
+> Service backend (gnome-keyring/kwallet) to store/retrieve the master
+> password. The dev shell runs no such daemon, so the call never returns —
+> the test sits until Qt's 300s watchdog fires and aborts the binary (seen as
+> a `SIGABRT` with a GDB stack dump, ~5 minutes wasted per run). This is
+> missing test infrastructure, not a QGIS bug — upstream CI containers start
+> a keyring daemon before running ctest. To avoid it locally, either run with
+> a real desktop session keyring active, or skip it explicitly:
+> `qgis-dev test -E test_core_authmanager`.
 
 ## Docs & standards
 

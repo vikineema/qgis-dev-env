@@ -11,24 +11,45 @@ Nothing stops you using any of them — the environment is **editor-neutral
 underneath**. The devshell exports `build/compile_commands.json`, so any
 clangd-based IDE (Qt Creator, VS Code + clangd, CLion) gets full C++
 intelligence by opening the checkout; `pyrightconfig.json` does the same
-for Python. Qt Creator in particular imports the CMake project directly and
-is an excellent choice for GUI-heavy work and the visual designer.
+for Python.
 
 What Neovim gets you *here specifically* is the packaged, reproducible
 experience: [nix-vim](https://github.com/timlinux/nix-vim) is a flake input
 pinned in `flake.lock`, so every colleague has the **same** editor to the
 byte, and the `<leader>p` menu drives the same `qgis-dev` tasks the
 terminal and CI use — no per-machine IDE setup, no config drift, nothing to
-install. Qt Creator's project files, by contrast, are per-user state we'd
-have to keep out of the pristine checkout, and its version isn't pinned by
-our flake.
+install.
 
-So: **Neovim is the supported, zero-setup default; Qt Creator is a
-first-class option you can point at the same build tree.** If you want it,
-open `CMakeLists.txt` in Qt Creator from inside the devshell (so it finds
-the pinned toolchain) and set the build directory to `build/`. Just don't
-let it write project files into tracked upstream paths — `qgis-dev doctor`
-will warn you if anything lands where git can see it.
+**Qt Creator is a scripted first-class option that just compiles and runs
+— no kit wizard, no preset picker.** Run `qgis-dev qtcreator` (or
+`nix run .#qtcreator`, or `<leader>pQ` in Neovim): it configures `build/`
+for real first (the same code path `qgis-dev build` uses), writes a
+single generated CMake preset that points straight at that already-built
+tree, then opens Qt Creator from inside the devshell with an isolated
+settings path (`.dev-env/qtcreator/`) so your real Qt Creator profile is
+never touched. Because there's exactly one preset, Qt Creator auto-selects
+it — there is nothing to pick. Hit Ctrl+B and it builds immediately
+(ccache-warm, same `build/` tree the CLI and Neovim use); the first time
+only, pick `qgis` from the run-target dropdown (QGIS defines many
+executable targets, so there's no single obvious default) — Qt Creator
+remembers that choice for the rest of the checkout's life. The editor opens
+with a larger default font (`[FontSettings]` in Qt Creator's own settings
+store — Options → Text Editor → Fonts & Color is where you'd change it by
+hand), seeded once so a later change there is never overwritten — override
+the seeded size with `QGIS_DEV_QTCREATOR_FONT_SIZE` before the first launch.
+This only reaches the editor: the surrounding chrome (menus, toolbars,
+sidebar) takes its font from the OS/Qt platform theme, which isn't part of
+Qt Creator's settings at all.
+
+The one thing left as a manual, one-time step is unrelated to compiling or
+running: Qt Creator's own code-intelligence preferences (Options → C++ →
+Code Model → enable Clangd and point it at the devshell's `clangd`; enable
+the ClangFormat and Clang-Tools plugins) aren't something we script. They
+live in Qt Creator's own settings store, which has no stable,
+version-independent on-disk format to safely template — and the isolated
+settings path means doing it once per checkout is all that's needed, not
+once per machine. `qgis-dev doctor` will warn you if Qt Creator ever
+writes a project file where upstream git can see it.
 
 ## Why embed the sidecar in the checkout instead of keeping it separate?
 

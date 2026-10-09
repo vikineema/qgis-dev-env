@@ -195,6 +195,10 @@ map('<leader>pu', function()
   detached({ 'designer', f }, 'Qt Designer opening (.ui for ' .. vim.fn.expand('%:t') .. ')')
 end, 'Qt Designer (this file’s .ui)')
 
+map('<leader>pQ', function()
+  detached({ 'qtcreator' }, 'Qt Creator opening (isolated settings — your profile is untouched)')
+end, 'Qt Creator (alternative IDE)')
+
 map('<leader>pt', function()
   task({ 'test' }, { title = 'ctest' })
 end, 'Test (ctest)')

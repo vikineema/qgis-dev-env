@@ -31,6 +31,7 @@ teardown() {
   [ -L "$QGIS/.nvim.lua" ]
   [ -L "$QGIS/.clangd" ]
   [ -L "$QGIS/pyrightconfig.json" ]
+  [ -L "$QGIS/CMakePresets.json" ]
   [ -f "$QGIS/PROMPT.log" ]
   [ -f "$QGIS/.dev-env/sidecar" ]
   run git -C "$QGIS" status --porcelain

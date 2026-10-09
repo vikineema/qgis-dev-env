@@ -434,6 +434,54 @@ cmd_designer() {
   disown 2>/dev/null || true
 }
 
+cmd_qtcreator() {
+  command -v qtcreator >/dev/null || die "Qt Creator not available (enter the devshell)"
+  # Configure for real BEFORE Qt Creator ever opens — Build/Run work the
+  # instant the window appears, with no "project not configured" step.
+  [[ -f "$BUILD/build.ninja" ]] || cmd_configure
+  local prof settings
+  prof="$(current_profile)"
+  settings="$STATE/qtcreator"
+  mkdir -p "$settings"
+  # The four profiles in CMakePresets.json are `hidden` (FR-K1) — invisible
+  # to any preset picker. This is the ONLY visible preset, regenerated on
+  # every launch to point at the build/ tree just configured above with no
+  # cache variables of its own (everything real already lives in
+  # CMakeCache.txt), so Qt Creator auto-selects it instead of asking: no
+  # kit wizard, no preset picker, ever.
+  cat >"$ROOT/CMakeUserPresets.json" <<PRESET
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "qgis-dev-active",
+      "displayName": "QGIS (qgis-dev — profile: $prof)",
+      "generator": "Ninja",
+      "binaryDir": "\${sourceDir}/build"
+    }
+  ]
+}
+PRESET
+  # Seed a larger default editor font via Qt Creator's own settings store
+  # (TextEditor::FontSettings — [FontSettings]/FontSize is a stable,
+  # long-standing key, not something that drifts across releases) rather
+  # than a global Qt env var. Only written once: if [FontSettings] is
+  # already present the user has either been here before or changed it via
+  # Options → Text Editor → Fonts & Color, and that choice is left alone.
+  # Qt Creator has no equivalent Options knob for the surrounding chrome
+  # (menus/toolbars/sidebar) — that font comes from the OS/Qt platform
+  # theme, outside Qt Creator's settings entirely.
+  local ini="$settings/QtProject/QtCreator.ini"
+  if [[ ! -f "$ini" ]] || ! grep -q '^\[FontSettings\]' "$ini"; then
+    mkdir -p "$(dirname "$ini")"
+    printf '\n[FontSettings]\nFontSize=%s\nFontZoom=100\n' \
+      "${QGIS_DEV_QTCREATOR_FONT_SIZE:-16}" >>"$ini"
+  fi
+  note "Qt Creator: $ROOT (profile '$prof', build/ already configured; settings isolated under .dev-env/qtcreator; editor font pre-set via Options → Text Editor → Fonts & Color — override with QGIS_DEV_QTCREATOR_FONT_SIZE before the first launch)"
+  setsid qtcreator -settingspath "$settings" "$ROOT/CMakeLists.txt" "$@" >/dev/null 2>&1 </dev/null &
+  disown 2>/dev/null || true
+}
+
 cmd_test() {
   [[ -f "$BUILD/build.ninja" ]] || die "not configured — run 'qgis-dev configure' first"
   (cd "$BUILD" && QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" ctest --output-on-failure "$@")
@@ -831,7 +879,7 @@ cmd_doctor() {
   local wt leaks
   while read -r wt; do
     leaks="$(git -C "$wt" status --porcelain 2>/dev/null |
-      grep -cE '(\.envrc|\.nvim\.lua|\.exrc|\.clangd|pyrightconfig\.json|\.luarc\.json|PROMPT\.log|SRS-qgis-dev-env\.md|\.dev-env|qgis-dev-env)' || true)"
+      grep -cE '(\.envrc|\.nvim\.lua|\.exrc|\.clangd|pyrightconfig\.json|\.luarc\.json|CMakePresets\.json|CMakeUserPresets\.json|CMakeLists\.txt\.user|PROMPT\.log|SRS-qgis-dev-env\.md|\.dev-env|qgis-dev-env)' || true)"
     if [[ "$leaks" -eq 0 ]]; then
       ok "isolation intact: $wt"
     else
@@ -857,6 +905,8 @@ qgis-dev — QGIS developer tasks (shared by `nix run .#<task>` and Neovim)
   run [args…]                launch built QGIS with an isolated profile
   designer [file]            open Qt Designer (non-blocking); resolves the
                              .ui for a source file when given one
+  qtcreator [args…]          configure, then open Qt Creator — no kit wizard,
+                             no preset picker, isolated settings (see FR-K)
   test [ctest args…]         run ctest (offscreen)
   test-file <path>           run the test matching a source file
   docs | docs-serve          build / serve the API docs
@@ -919,6 +969,10 @@ run)
 designer)
   init
   cmd_designer "$@"
+  ;;
+qtcreator)
+  init
+  cmd_qtcreator "$@"
   ;;
 test)
   init

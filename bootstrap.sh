@@ -30,6 +30,7 @@ LINKS=(
   ".clangd:overlay/clangd.yaml"
   "pyrightconfig.json:overlay/pyrightconfig.json"
   ".luarc.json:overlay/luarc.json"
+  "CMakePresets.json:overlay/CMakePresets.json"
 )
 
 # everything upstream git must locally ignore (FR-I3)
@@ -40,6 +41,10 @@ EXCLUDES=(
   ".clangd"
   "pyrightconfig.json"
   ".luarc.json"
+  "CMakePresets.json"
+  "CMakeUserPresets.json" # CMake's own personal-override file, never ours
+  "CMakeLists.txt.user" # Qt Creator per-project IDE state (FR-K3)
+  "CMakeLists.txt.user.*"
   "SRS-qgis-dev-env.md" # legacy symlink from pre-0.2 bootstraps
   "PROMPT.log"
   ".dev-env/"
@@ -170,7 +175,7 @@ install)
   touch "$TARGET/PROMPT.log"
   git -C "$TARGET" config blame.ignoreRevsFile .git-blame-ignore-revs
   # Verify isolation immediately (FR-I4)
-  if git -C "$TARGET" status --porcelain | grep -qE '\.envrc|\.nvim\.lua|\.exrc|\.clangd|pyrightconfig|\.luarc|PROMPT\.log|\.dev-env|qgis-dev-env'; then
+  if git -C "$TARGET" status --porcelain | grep -qE '\.envrc|\.nvim\.lua|\.exrc|\.clangd|pyrightconfig|\.luarc|CMakePresets\.json|PROMPT\.log|\.dev-env|qgis-dev-env'; then
     die "overlay files are visible to git — isolation FAILED, investigate before continuing"
   fi
   note "done. Next: cd '$TARGET' && direnv allow   (then 'qgis-dev build' or <leader>pb in Neovim)"
