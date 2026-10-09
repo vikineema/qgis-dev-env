@@ -1,0 +1,80 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "qgis-debug",
+      "displayName": "QGIS: debug (qgis-dev default)",
+      "description": "Same build/ tree and ccache as 'qgis-dev build' and Neovim. Hidden (base template only, FR-K1) — 'qgis-dev qtcreator' generates the one visible preset in CMakeUserPresets.json so Qt Creator never shows a picker; use these by name from the CLI ('cmake --preset=qgis-debug') if you want them directly.",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/app",
+        "CMAKE_LINKER_TYPE": "MOLD",
+        "WITH_3D": "ON",
+        "WITH_PDAL": "ON",
+        "WITH_QTWEBENGINE": "ON",
+        "ENABLE_TESTS": "ON",
+        "CMAKE_CXX_FLAGS_DEBUG": "-g -gsplit-dwarf -UGDAL_DEBUG",
+        "CMAKE_C_FLAGS_DEBUG": "-g -gsplit-dwarf -UGDAL_DEBUG",
+        "CMAKE_EXE_LINKER_FLAGS": "-Wl,--gdb-index",
+        "CMAKE_SHARED_LINKER_FLAGS": "-Wl,--gdb-index",
+        "QT_PLUGINS_DIR": "$env{QGIS_DEV_QT_PLUGINS_DIR}",
+        "QSCI_SIP_DIR": "$env{QGIS_DEV_QSCI_SIP_DIR}",
+        "QSCI_DIST_INFO": "$env{QGIS_DEV_QSCI_DIST_INFO}",
+        "PYQT6_DIST_INFO": "$env{QGIS_DEV_PYQT6_DIST_INFO}"
+      }
+    },
+    {
+      "name": "qgis-release",
+      "displayName": "QGIS: release",
+      "description": "Optimised build with symbols — matches the 'release' qgis-dev profile.",
+      "hidden": true,
+      "inherits": "qgis-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_CXX_FLAGS_DEBUG": null,
+        "CMAKE_C_FLAGS_DEBUG": null,
+        "CMAKE_EXE_LINKER_FLAGS": null,
+        "CMAKE_SHARED_LINKER_FLAGS": null
+      }
+    },
+    {
+      "name": "qgis-minimal",
+      "displayName": "QGIS: minimal (fast C++ iteration)",
+      "description": "3D/WebEngine/PDAL/tests/bindings off — matches the 'minimal' qgis-dev profile. Not for PyQGIS work.",
+      "hidden": true,
+      "inherits": "qgis-debug",
+      "cacheVariables": {
+        "WITH_3D": "OFF",
+        "WITH_PDAL": "OFF",
+        "WITH_QTWEBENGINE": "OFF",
+        "WITH_BINDINGS": "OFF",
+        "ENABLE_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "qgis-asan-ubsan",
+      "displayName": "QGIS: ASan+UBSan",
+      "description": "Matches the 'asan-ubsan' qgis-dev profile — default tool for memory bugs.",
+      "hidden": true,
+      "inherits": "qgis-debug",
+      "cacheVariables": {
+        "WITH_3D": "OFF",
+        "WITH_PDAL": "OFF",
+        "WITH_QTWEBENGINE": "OFF",
+        "CMAKE_C_FLAGS_DEBUG": null,
+        "CMAKE_CXX_FLAGS_DEBUG": null,
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=address,undefined",
+        "CMAKE_C_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer -g -UGDAL_DEBUG",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer -g -UGDAL_DEBUG"
+      }
+    }
+  ]
+}
