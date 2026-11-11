@@ -34,7 +34,10 @@
         "aarch64-linux"
       ];
       lib = nixpkgs.lib;
-      forAllSystems = f: lib.genAttrs systems (system: f (import nixpkgs { inherit system; }) system);
+      forAllSystems = f: lib.genAttrs systems (system: f (import nixpkgs { inherit system; config.allowUnfreePredicate = pkg:
+          builtins.elem (lib.getName pkg) [
+            "vscode"
+          ];}) system);
 
       # Every task exposed as `nix run .#<task>` — same names as the Neovim
       # menu; both call the single qgis-dev implementation (FR-N4, NFR-M1).
@@ -61,6 +64,7 @@
         "ccache-stats"
         "ccache-zero"
         "doctor"
+        "vscode"
       ];
     in
     {
@@ -152,6 +156,9 @@
           # and Neovim with no manual kit setup. Guarded: absent on some pins.
           qtCreator = lib.optionals (pkgs ? qtcreator) [ pkgs.qtcreator ];
 
+          # Visual Studio Code
+          vsCode = lib.optionals (pkgs ? vscode) [ pkgs.vscode ];
+
           # mkdocs stack for the developer handbook (FR-D4) — mirrors the
           # kartoza/InfrastructureMapper documentation toolchain.
           docsPython = pkgs.python3.withPackages (ps: [
@@ -174,9 +181,12 @@
             packages = [
               qgisDev
               devPython
+              qt.qtbase
+              qt.qtwayland
             ]
             ++ editor
             ++ qtCreator
+            ++ vsCode
             ++ lspServers
             ++ buildTools
             ++ qaTools
@@ -212,6 +222,11 @@
                 mkdir -p .dev-env
                 ln -sfn "$QGIS_DEV_PYTHON" .dev-env/python
               fi
+              # Visual Studio Code
+              export VSCODE_USER_DIR="$(pwd)/qgis-dev-env/.vscode"
+              export VSCODE_PROFILE="qgis-dev-env"
+              export VSCODE_EXT_DIR="$(pwd)/qgis-dev-env/.vscode-extensions"
+              export VSCODE_SETTINGS_FILE="$VSCODE_USER_DIR/settings.json"
               # Branded activation banner (real dotfile per SRS C5).
               source ${./lib/shell-motd.sh}
             '';
