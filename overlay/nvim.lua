@@ -199,6 +199,10 @@ map('<leader>pQ', function()
   detached({ 'qtcreator' }, 'Qt Creator opening (isolated settings — your profile is untouched)')
 end, 'Qt Creator (alternative IDE)')
 
+map('<leader>pQ', function()
+  detached({ 'vscpde' }, 'Visual Studo Code opening (isolated settings — your profile is untouched)')
+end, 'Visual Studio Code (alternative IDE)')
+
 map('<leader>pt', function()
   task({ 'test' }, { title = 'ctest' })
 end, 'Test (ctest)')

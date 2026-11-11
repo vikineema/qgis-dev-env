@@ -435,11 +435,12 @@ cmd_designer() {
 }
 
 cmd_qtcreator() {
-  command -v qtcreator >/dev/null || die "Qt Creator not available (enter the devshell)"
-  # Configure for real BEFORE Qt Creator ever opens — Build/Run work the
+  command -v code >/dev/null || die "VS Code not available (enter the devshell)"
+  # Configure for real BEFORE VS Code ever opens — Build/Run work the
   # instant the window appears, with no "project not configured" step.
   [[ -f "$BUILD/build.ninja" ]] || cmd_configure
-  local prof settings
+
+  local prof user_data_dir ext_dir
   prof="$(current_profile)"
   settings="$STATE/qtcreator"
   mkdir -p "$settings"
@@ -481,6 +482,58 @@ PRESET
   setsid qtcreator -settingspath "$settings" "$ROOT/CMakeLists.txt" "$@" >/dev/null 2>&1 </dev/null &
   disown 2>/dev/null || true
 }
+
+cmd_vscode() {
+  command -v cp >/dev/null || die "Qt Creator not available (enter the devshell)"
+  # Configure for real BEFORE Qt Creator ever opens — Build/Run work the
+  # instant the window appears, with no "project not configured" step.
+  [[ -f "$BUILD/build.ninja" ]] || cmd_configure
+  
+  local prof user_data_dir ext_dir
+  prof="$(current_profile)"
+  user_data_dir="$STATE/vscode/user-data"
+  ext_dir="$STATE/vscode/extensions"
+  mkdir -p "$user_data_dir" "$ext_dir" "$ROOT/.vscode"
+  
+  #Expose the single active preset pointing to the configured build directory
+  cat >"$ROOT/CMakeUserPresets.json" <<PRESET
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "qgis-dev-active",
+      "displayName": "QGIS (qgis-dev — profile: $prof)",
+      "generator": "Ninja",
+      "binaryDir": "\${sourceDir}/build"
+    }
+  ]
+}
+PRESET
+
+  # Pre-seed workspace settings so CMake Tools and C++ extensions
+  # latch directly onto the existing build directory without prompts
+  local ws_settings="$ROOT/.vscode/settings.json"
+  if [[ ! -f "$ws_settings" ]]; then
+    cat >"$ws_settings" <<JSON
+{
+  "cmake.configureOnOpen": false,
+  "cmake.defaultConfigurePresetName": "qgis-dev-active",
+  "cmake.buildDirectory": "\${workspaceFolder}/build",
+  "C_Cpp.default.compileCommands": "\${workspaceFolder}/build/compile_commands.json",
+  "editor.fontSize": ${QGIS_DEV_VSCODE_FONT_SIZE:-14}
+}
+JSON
+  fi
+
+  note "VS Code: $ROOT (profile '$prof', build/ already configured; isolated user data under $STATE/vscode)"
+
+  setsid code \
+    --user-data-dir "$user_data_dir" \
+    --extensions-dir "$ext_dir" \
+    "$ROOT" "$@" >/dev/null 2>&1 </dev/null &
+  disown 2>/dev/null || true
+}
+
 
 cmd_test() {
   [[ -f "$BUILD/build.ninja" ]] || die "not configured — run 'qgis-dev configure' first"
@@ -907,6 +960,8 @@ qgis-dev — QGIS developer tasks (shared by `nix run .#<task>` and Neovim)
                              .ui for a source file when given one
   qtcreator [args…]          configure, then open Qt Creator — no kit wizard,
                              no preset picker, isolated settings (see FR-K)
+  vscode [args…]             configure, then open Visual Studion Code
+                             no preset picker, isolated settings (see FR-K)
   test [ctest args…]         run ctest (offscreen)
   test-file <path>           run the test matching a source file
   docs | docs-serve          build / serve the API docs
@@ -973,6 +1028,10 @@ designer)
 qtcreator)
   init
   cmd_qtcreator "$@"
+  ;;
+vscode)
+  init
+  cmd_vscode "$@"
   ;;
 test)
   init
